@@ -5,12 +5,18 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app.core.config import settings
 from app.db.base import Base
 import app.db.models  # Ensure all models are imported so target_metadata includes them
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.get_database_url())
+database_url = settings.get_database_url().replace("%", "%%")
+config.set_main_option("sqlalchemy.url", database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

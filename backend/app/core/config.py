@@ -1,7 +1,7 @@
 from typing import Optional
+from urllib.parse import quote_plus
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AI-Powered Student Interview Preparation Platform"
     API_V1_STR: str = "/api/v1"
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     def get_database_url(self) -> str:
         if self.DATABASE_URL:
             return self.DATABASE_URL
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{quote_plus(self.POSTGRES_PASSWORD)}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
 
 settings = Settings()
