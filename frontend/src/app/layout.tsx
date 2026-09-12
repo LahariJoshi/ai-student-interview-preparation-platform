@@ -4,7 +4,7 @@ import "./globals.css";
 import React from "react";
 import Link from "next/link";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { User, LogOut, UserCheck, Sparkles } from "lucide-react";
+import { User, LogOut, UserCheck, Sparkles, FileText } from "lucide-react";
 
 function Navigation() {
   const { user, logout } = useAuth();
@@ -23,6 +23,13 @@ function Navigation() {
                 <UserCheck className="w-4 h-4 text-emerald-400" />
                 <span className="font-medium text-white">{user.full_name}</span>
               </div>
+              <Link
+                href="/resume"
+                className="flex items-center gap-1 text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 font-medium transition"
+              >
+                <FileText className="w-4 h-4 text-sky-400" />
+                Resume
+              </Link>
               <Link
                 href="/profile"
                 className="flex items-center gap-1 text-sm bg-sky-600 hover:bg-sky-500 text-white px-3 py-1.5 rounded-lg font-medium transition"

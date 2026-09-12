@@ -1,12 +1,13 @@
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 from sqlalchemy import String, DateTime, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.db.models.profile import Profile
+    from app.db.models.resume import Resume
 
 
 class User(Base):
@@ -25,4 +26,7 @@ class User(Base):
 
     profile: Mapped[Optional["Profile"]] = relationship(
         "Profile", back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
+    resumes: Mapped[List["Resume"]] = relationship(
+        "Resume", back_populates="user", cascade="all, delete-orphan"
     )

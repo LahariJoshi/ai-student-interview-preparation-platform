@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Uploaded user files
+backend/uploads/
+
 # Python virtual environment
 venv/
 .venv/

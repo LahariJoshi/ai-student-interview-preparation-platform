@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # CORS
     FRONTEND_URL: str = "http://localhost:3000"
 
+    # File Storage Settings
+    UPLOADS_DIR: str = "uploads/resumes"
+
     # ATS Scoring Component Weights (Centralized & Configurable)
     ATS_WEIGHT_FORMAT: float = 0.25
     ATS_WEIGHT_KEYWORD: float = 0.35
