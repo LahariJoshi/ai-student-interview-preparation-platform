@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
-from sqlalchemy import String, Integer, DateTime, UUID, ForeignKey
+from typing import TYPE_CHECKING, Optional
+from sqlalchemy import String, Integer, DateTime, UUID, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
@@ -23,6 +23,11 @@ class Resume(Base):
     file_path: Mapped[str] = mapped_column(String(512), nullable=False)
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    raw_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    extraction_status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False)
+    character_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    word_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    extracted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )

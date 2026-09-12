@@ -2,16 +2,26 @@ import os
 import uuid
 import re
 from pathlib import Path
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.db.models.user import User
 from app.db.models.resume import Resume
-from app.modules.resume.schemas import ResumeOut, ResumeListOut, MessageResponse
+from app.modules.resume.schemas import (
+    ResumeOut,
+    ResumeListOut,
+    ResumeTextOut,
+    MessageResponse,
+)
+
+from app.modules.resume.services.pdf_extractor import extract_text_from_pdf
+from app.modules.resume.services.docx_extractor import extract_text_from_docx
 
 router = APIRouter(prefix="/resume", tags=["Resume"])
 
@@ -193,3 +203,112 @@ async def delete_resume(
     await db.commit()
 
     return {"message": "Resume deleted successfully."}
+
+@router.post("/{resume_id}/extract-text", response_model=ResumeTextOut)
+async def extract_resume_text(
+    resume_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # 1. Find the resume and verify ownership
+    result = await db.execute(
+        select(Resume).where(
+            Resume.id == resume_id,
+            Resume.user_id == current_user.id,
+        )
+    )
+    resume = result.scalar_one_or_none()
+
+    if not resume:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found or access unauthorized.",
+        )
+
+    # 2. Check that the physical file still exists
+    if not os.path.exists(resume.file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume file not found on the server.",
+        )
+
+    try:
+        # 3. Select the correct extractor
+        if resume.mime_type == "application/pdf":
+            extracted_text = extract_text_from_pdf(resume.file_path)
+
+        elif resume.mime_type == (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ):
+            extracted_text = extract_text_from_docx(resume.file_path)
+
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unsupported resume file type.",
+            )
+
+        # 4. Check whether any meaningful text was extracted
+        if not extracted_text.strip():
+            resume.extraction_status = "failed_empty"
+            resume.raw_text = None
+            resume.character_count = 0
+            resume.word_count = 0
+            await db.commit()
+
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "No readable text could be extracted from this resume. "
+                    "The file may be empty or image-based."
+                ),
+            )
+
+        # 5. Save extracted text and statistics
+        resume.raw_text = extracted_text
+        resume.character_count = len(extracted_text)
+        resume.word_count = len(extracted_text.split())
+        resume.extraction_status = "completed"
+        resume.extracted_at = datetime.now(timezone.utc)
+
+        await db.commit()
+        await db.refresh(resume)
+
+        return resume
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        resume.extraction_status = "failed"
+        await db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to extract text from the resume.",
+        )
+    
+@router.get("/{resume_id}/text", response_model=ResumeTextOut)
+async def get_resume_text(
+    resume_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Find resume and verify ownership
+    result = await db.execute(
+        select(Resume).where(
+            Resume.id == resume_id,
+            Resume.user_id == current_user.id,
+        )
+    )
+
+    resume = result.scalar_one_or_none()
+
+    if not resume:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found or access unauthorized.",
+        )
+
+    # Return extraction information
+    return resume
