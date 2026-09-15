@@ -7,6 +7,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.db.models.user import User
+    from app.db.models.resume_analysis import ResumeAnalysis
 
 
 class Resume(Base):
@@ -39,3 +40,6 @@ class Resume(Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="resumes")
+    analysis: Mapped[Optional["ResumeAnalysis"]] = relationship(
+        "ResumeAnalysis", back_populates="resume", uselist=False, cascade="all, delete-orphan"
+    )

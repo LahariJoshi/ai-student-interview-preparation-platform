@@ -13,15 +13,19 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.db.models.user import User
 from app.db.models.resume import Resume
+from app.db.models.resume_analysis import ResumeAnalysis
 from app.modules.resume.schemas import (
     ResumeOut,
     ResumeListOut,
     ResumeTextOut,
+    ResumeAnalysisOut,
+    AnalysisTriggerResponse,
     MessageResponse,
 )
 
 from app.modules.resume.services.pdf_extractor import extract_text_from_pdf
 from app.modules.resume.services.docx_extractor import extract_text_from_docx
+from app.modules.resume.services.resume_analyzer import analyze_resume
 
 router = APIRouter(prefix="/resume", tags=["Resume"])
 
@@ -312,3 +316,128 @@ async def get_resume_text(
 
     # Return extraction information
     return resume
+
+
+# ── Milestone 3: Resume Analysis Endpoints ────────────────────────────────────
+
+@router.post("/{resume_id}/analyze", response_model=ResumeAnalysisOut)
+async def analyze_resume_endpoint(
+    resume_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Run deterministic resume analysis on extracted text.
+    Requires extraction_status == 'completed'.
+    Upserts the ResumeAnalysis record (create or update).
+    """
+    # 1. Find resume and verify ownership
+    result = await db.execute(
+        select(Resume).where(
+            Resume.id == resume_id,
+            Resume.user_id == current_user.id,
+        )
+    )
+    resume = result.scalar_one_or_none()
+
+    if not resume:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found or access unauthorized.",
+        )
+
+    # 2. Require extraction to have completed
+    if resume.extraction_status != "completed" or not resume.raw_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Resume text has not been extracted yet. "
+                "Call POST /resume/{resume_id}/extract-text first."
+            ),
+        )
+
+    # 3. Run the deterministic analysis
+    try:
+        analysis_result = analyze_resume(
+            raw_text=resume.raw_text,
+            word_count=resume.word_count or 0,
+            character_count=resume.character_count or 0,
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Resume analysis failed due to an internal error.",
+        )
+
+    # 4. Upsert: check for existing analysis record
+    existing_result = await db.execute(
+        select(ResumeAnalysis).where(ResumeAnalysis.resume_id == resume_id)
+    )
+    analysis = existing_result.scalar_one_or_none()
+
+    if analysis:
+        # Update existing record
+        analysis.analysis_status = "completed"
+        analysis.quality_score = analysis_result["quality_score"]
+        analysis.sections_json = analysis_result["sections"]
+        analysis.skills_json = analysis_result["skills"]
+        analysis.gaps_json = analysis_result["gaps"]
+        analysis.quality_details_json = analysis_result["quality_details"]
+        analysis.analyzed_at = analysis_result["analyzed_at"]
+    else:
+        # Create new record
+        analysis = ResumeAnalysis(
+            resume_id=resume_id,
+            user_id=current_user.id,
+            analysis_status="completed",
+            quality_score=analysis_result["quality_score"],
+            sections_json=analysis_result["sections"],
+            skills_json=analysis_result["skills"],
+            gaps_json=analysis_result["gaps"],
+            quality_details_json=analysis_result["quality_details"],
+            analyzed_at=analysis_result["analyzed_at"],
+        )
+        db.add(analysis)
+
+    await db.commit()
+    await db.refresh(analysis)
+    return analysis
+
+
+@router.get("/{resume_id}/analysis", response_model=ResumeAnalysisOut)
+async def get_resume_analysis(
+    resume_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Retrieve the stored analysis for a resume.
+    Returns 404 if analysis has not been run yet.
+    """
+    # Verify resume ownership
+    resume_result = await db.execute(
+        select(Resume).where(
+            Resume.id == resume_id,
+            Resume.user_id == current_user.id,
+        )
+    )
+    resume = resume_result.scalar_one_or_none()
+    if not resume:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found or access unauthorized.",
+        )
+
+    # Fetch analysis
+    analysis_result = await db.execute(
+        select(ResumeAnalysis).where(ResumeAnalysis.resume_id == resume_id)
+    )
+    analysis = analysis_result.scalar_one_or_none()
+
+    if not analysis:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No analysis found for this resume. Run POST /resume/{resume_id}/analyze first.",
+        )
+
+    return analysis

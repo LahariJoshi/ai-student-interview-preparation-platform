@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { apiFetch } from "@/lib/api";
 import { UploadCloud, FileText, Trash2, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import ResumeAnalysis from "./ResumeAnalysis";
 
 export interface ResumeItem {
   id: string;
@@ -11,16 +12,25 @@ export interface ResumeItem {
   file_size: number;
   mime_type: string;
   created_at: string;
+
+  extraction_status?: string;
+  character_count?: number | null;
+  word_count?: number | null;
 }
 
 export default function ResumeUploadDropzone() {
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
+  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [extractingId, setExtractingId] = useState<string | null>(null);
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  const [analyzedIds, setAnalyzedIds] = useState<Set<string>>(new Set());
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
 
   useEffect(() => {
     fetchResumes();
@@ -28,9 +38,33 @@ export default function ResumeUploadDropzone() {
 
   const fetchResumes = async () => {
     setIsLoadingList(true);
+
     try {
-      const data = await apiFetch<{ resumes: ResumeItem[]; total_count: number }>("/resume/my-resumes");
+      const data = await apiFetch<{
+        resumes: ResumeItem[];
+        total_count: number;
+      }>("/resume/my-resumes");
+
       setResumes(data.resumes);
+
+      // Check which resumes already have an analysis
+      const analysisChecks = await Promise.all(
+        data.resumes.map(async (resume) => {
+          try {
+            await apiFetch(`/resume/${resume.id}/analysis`);
+            return resume.id;
+          } catch {
+            // 404 means this resume has not been analyzed yet
+            return null;
+          }
+        })
+      );
+
+      const completedAnalysisIds = new Set(
+        analysisChecks.filter((id): id is string => id !== null)
+      );
+
+      setAnalyzedIds(completedAnalysisIds);
     } catch (err: any) {
       setError(err.message || "Failed to load resumes.");
     } finally {
@@ -87,6 +121,66 @@ export default function ResumeUploadDropzone() {
       }
     }
   };
+
+    const handleExtractText = async (resumeId: string) => {
+    setError(null);
+    setSuccess(null);
+    setExtractingId(resumeId);
+
+    try {
+      const extracted = await apiFetch<ResumeItem>(
+        `/resume/${resumeId}/extract-text`,
+        {
+          method: "POST",
+        }
+      );
+
+      setResumes((prev) =>
+        prev.map((resume) =>
+          resume.id === resumeId
+            ? {
+                ...resume,
+                extraction_status: extracted.extraction_status,
+                character_count: extracted.character_count,
+                word_count: extracted.word_count,
+              }
+            : resume
+        )
+      );
+
+      setSuccess("Resume text extracted successfully.");
+    } catch (err: any) {
+      setError(err.message || "Failed to extract resume text.");
+    } finally {
+      setExtractingId(null);
+    }
+  };
+
+  const handleAnalyzeResume = async (resumeId: string) => {
+    setError(null);
+    setSuccess(null);
+    setAnalyzingId(resumeId);
+
+    try {
+      await apiFetch(`/resume/${resumeId}/analyze`, {
+        method: "POST",
+      });
+
+      setAnalyzedIds((prev) => {
+        const updated = new Set(prev);
+        updated.add(resumeId);
+        return updated;
+      });
+
+      setSuccess("Resume analysis completed successfully.");
+    } catch (err: any) {
+      setError(err.message || "Failed to analyze resume.");
+    } finally {
+      setAnalyzingId(null);
+    }
+  };
+
+  
 
   const handleDelete = async (resumeId: string) => {
     setError(null);
@@ -226,18 +320,79 @@ export default function ResumeUploadDropzone() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleDelete(resume.id)}
-                  className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition"
-                  title="Delete Resume"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                    {resume.extraction_status === "completed" ? (
+                      <span className="text-xs text-emerald-400 font-medium">
+                        ✓ Text Extracted
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleExtractText(resume.id)}
+                        disabled={extractingId === resume.id}
+                        className="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition"
+                      >
+                        {extractingId === resume.id ? (
+                          <span className="flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Extracting...
+                          </span>
+                        ) : (
+                          "Extract Text"
+                        )}
+                      </button>
+                    )}
+
+                    {resume.extraction_status === "completed" && (
+                      analyzedIds.has(resume.id) ? (
+                        <button
+                          onClick={() => setSelectedAnalysisId(resume.id)}
+                          className="text-xs text-emerald-400 font-medium hover:text-emerald-300 transition"
+                        >
+                          ✓ View Analysis
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAnalyzeResume(resume.id)}
+                          disabled={analyzingId === resume.id}
+                          className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition"
+                        >
+                          {analyzingId === resume.id ? (
+                            <span className="flex items-center gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Analyzing...
+                            </span>
+                          ) : (
+                            "Analyze Resume"
+                          )}
+                        </button>
+                      )
+                    )}
+
+                    <button
+                      onClick={() => handleDelete(resume.id)}
+                      className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition"
+                      title="Delete Resume"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
               </div>
             ))}
           </div>
         )}
       </div>
+            {selectedAnalysisId && (
+        <div className="glass-card p-6">
+          <ResumeAnalysis resumeId={selectedAnalysisId} />
+
+          <button
+            onClick={() => setSelectedAnalysisId(null)}
+            className="mt-4 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm transition"
+          >
+            Close Analysis
+          </button>
+        </div>
+      )}
     </div>
   );
 }
