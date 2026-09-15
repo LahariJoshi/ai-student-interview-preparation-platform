@@ -40,18 +40,36 @@ class MessageResponse(BaseModel):
     message: str
 
 
-# ── Milestone 3: Resume Analysis Schemas ─────────────────────────────────────
+# ── Milestone 3 + Milestone 4: Resume Analysis Schemas ──────────────────────
 
 class ResumeAnalysisOut(BaseModel):
     id: UUID
     resume_id: UUID
     user_id: UUID
+
     analysis_status: str
+
+    # Final M4 advanced quality score
     quality_score: Optional[float] = None
+
+    # M3 structural analysis
     sections_json: Optional[Dict[str, bool]] = None
+
+    # Detected skills by category
     skills_json: Optional[Dict[str, List[str]]] = None
+
+    # Evidence-based improvement gaps
     gaps_json: Optional[List[Dict[str, str]]] = None
+
+    # Contains both M3 and M4 quality analysis
+    #
+    # Example:
+    # {
+    #     "m3_structural": {...},
+    #     "m4_advanced": {...}
+    # }
     quality_details_json: Optional[Dict[str, Any]] = None
+
     analyzed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
