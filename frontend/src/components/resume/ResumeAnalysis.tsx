@@ -15,6 +15,23 @@ interface GapItem {
   category: string;
 }
 
+interface M4AdvancedQuality {
+  total_score: number;
+  length_score: number;
+  action_verb_score: number;
+  metrics_score: number;
+  project_quality_score: number;
+  skill_breadth_score: number;
+  skill_category_diversity_score: number;
+  summary_quality_score: number;
+  section_completeness_score: number;
+  contact_score: number;
+  sections_found: number;
+  sections_checked: number;
+  contact_fields_found: number;
+  total_skills_detected: number;
+}
+
 interface ResumeAnalysisData {
   id: string;
   resume_id: string;
@@ -24,7 +41,10 @@ interface ResumeAnalysisData {
   sections_json: Record<string, boolean> | null;
   skills_json: Record<string, string[]> | null;
   gaps_json: GapItem[] | null;
-  quality_details_json: Record<string, any> | null;
+  quality_details_json: {
+    m3_structural?: Record<string, any>;
+    m4_advanced?: M4AdvancedQuality;
+  } | null;
   analyzed_at: string | null;
   created_at: string;
   updated_at: string;
@@ -137,6 +157,7 @@ export default function ResumeAnalysis({
   const sections = analysis.sections_json || {};
   const skills = analysis.skills_json || {};
   const gaps = analysis.gaps_json || [];
+  const m4Advanced = analysis.quality_details_json?.m4_advanced;
 
   return (
     <div className="space-y-6">
@@ -151,38 +172,139 @@ export default function ResumeAnalysis({
         </div>
       )}
 
-      {/* Quality Score */}
-      <div className="glass-card p-6">
-        <div className="text-center">
-          <p className="text-slate-400 text-sm">
-            Resume Quality Score
-          </p>
+      {/* M4 Quality Breakdown */}
+      {m4Advanced && (
+        <div className="glass-card p-6">
+          <div className="mb-5">
+            <h3 className="text-lg font-bold text-white">
+              Resume Quality Breakdown
+            </h3>
 
-          <div className="mt-3">
-            <span className="text-5xl font-extrabold text-white">
-              {analysis.quality_score ?? "--"}
-            </span>
-
-            <span className="text-slate-500 text-lg ml-1">
-              / 100
-            </span>
+            <p className="text-slate-400 text-sm mt-1">
+              Detailed analysis of the factors contributing to your resume score.
+            </p>
           </div>
 
-          <p className="text-slate-500 text-xs mt-2">
-            Based on resume structure, contact information and
-            detected content quality.
-          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+              <p className="text-slate-400 text-xs">Resume Length</p>
+              <p className="text-white text-lg font-semibold mt-1">
+                {m4Advanced.length_score} / 10
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+              <p className="text-slate-400 text-xs">Action Verbs</p>
+              <p className="text-white text-lg font-semibold mt-1">
+                {m4Advanced.action_verb_score} / 10
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+              <p className="text-slate-400 text-xs">Quantifiable Metrics</p>
+              <p className="text-white text-lg font-semibold mt-1">
+                {m4Advanced.metrics_score} / 10
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+              <p className="text-slate-400 text-xs">Project Quality</p>
+              <p className="text-white text-lg font-semibold mt-1">
+                {m4Advanced.project_quality_score} / 15
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+              <p className="text-slate-400 text-xs">Skills Breadth</p>
+              <p className="text-white text-lg font-semibold mt-1">
+                {m4Advanced.skill_breadth_score} / 10
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+              <p className="text-slate-400 text-xs">Skill Category Diversity</p>
+              <p className="text-white text-lg font-semibold mt-1">
+                {m4Advanced.skill_category_diversity_score} / 10
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+              <p className="text-slate-400 text-xs">Summary Quality</p>
+              <p className="text-white text-lg font-semibold mt-1">
+                {m4Advanced.summary_quality_score} / 10
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+              <p className="text-slate-400 text-xs">Section Completeness</p>
+              <p className="text-white text-lg font-semibold mt-1">
+                {m4Advanced.section_completeness_score} / 15
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 sm:col-span-2">
+              <p className="text-slate-400 text-xs">Contact Information</p>
+              <p className="text-white text-lg font-semibold mt-1">
+                {m4Advanced.contact_score} / 10
+              </p>
+            </div>
+          </div>
         </div>
+      )}
+
+    {/* Quality Score */}
+    <div className="glass-card p-6">
+      <div className="text-center">
+        <p className="text-slate-400 text-sm">
+          Resume Quality Score
+        </p>
+
+        <div className="mt-3">
+          <span className="text-5xl font-extrabold text-white">
+            {analysis.quality_score ?? "--"}
+          </span>
+
+          <span className="text-slate-500 text-lg ml-1">
+            / 100
+          </span>
+        </div>
+
+        <p className="text-slate-500 text-xs mt-2">
+          Based on resume structure, contact information and
+          detected content quality.
+        </p>
       </div>
+    </div>
 
       {/* Section Analysis */}
       <div className="glass-card p-6">
-        <div className="flex items-center gap-2 mb-5">
-          <FileSearch className="w-5 h-5 text-sky-400" />
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <FileSearch className="w-5 h-5 text-sky-400" />
 
-          <h3 className="text-lg font-bold text-white">
-            Section Analysis
-          </h3>
+            <div>
+              <h3 className="text-lg font-bold text-white">
+                Section Analysis
+              </h3>
+
+              <p className="text-slate-500 text-xs mt-1">
+                Sections detected from your resume
+              </p>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <p className="text-white font-semibold text-lg">
+              {Object.values(sections).filter(Boolean).length}
+              <span className="text-slate-500 text-sm font-normal">
+                {" "} / {Object.keys(SECTION_LABELS).length}
+              </span>
+            </p>
+
+            <p className="text-slate-500 text-xs">
+              sections found
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -193,7 +315,11 @@ export default function ResumeAnalysis({
               return (
                 <div
                   key={key}
-                  className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-lg p-3"
+                  className={`flex items-center justify-between rounded-lg p-3 border ${
+                    detected
+                      ? "bg-emerald-950/20 border-emerald-900/60"
+                      : "bg-slate-900 border-slate-800"
+                  }`}
                 >
                   <span className="text-sm text-slate-300">
                     {label}
@@ -216,7 +342,6 @@ export default function ResumeAnalysis({
           )}
         </div>
       </div>
-
       {/* Detected Skills */}
       <div className="glass-card p-6">
         <h3 className="text-lg font-bold text-white mb-5">
@@ -262,9 +387,15 @@ export default function ResumeAnalysis({
 
       {/* Improvement Gaps */}
       <div className="glass-card p-6">
-        <h3 className="text-lg font-bold text-white mb-5">
-          Improvement Areas
-        </h3>
+        <div className="mb-5">
+          <h3 className="text-lg font-bold text-white">
+            Improvement Areas
+          </h3>
+
+          <p className="text-slate-500 text-xs mt-1">
+            Areas that may need attention based on your resume analysis
+          </p>
+        </div>
 
         {gaps.length === 0 ? (
           <div className="flex items-center gap-2 text-emerald-400 text-sm">
@@ -276,18 +407,22 @@ export default function ResumeAnalysis({
             {gaps.map((gap, index) => (
               <div
                 key={`${gap.category}-${index}`}
-                className="flex items-start gap-3 bg-slate-900 border border-slate-800 rounded-lg p-4"
+                className="bg-slate-900 border border-slate-800 rounded-lg p-4"
               >
-                <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
 
-                <div>
-                  <p className="text-sm text-slate-300">
-                    {gap.message}
-                  </p>
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      {gap.message}
+                    </p>
 
-                  <span className="inline-block mt-2 px-2 py-0.5 rounded bg-slate-800 text-slate-500 text-xs capitalize">
-                    {gap.category}
-                  </span>
+                    <div className="mt-3">
+                      <span className="inline-block px-2 py-1 rounded bg-slate-800 text-slate-400 text-xs capitalize">
+                        {gap.category}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
