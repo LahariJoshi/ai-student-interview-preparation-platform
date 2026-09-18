@@ -30,3 +30,12 @@ class JobDescriptionListOut(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+from uuid import UUID
+
+from pydantic import BaseModel
+
+
+class SemanticAnalysisRequest(BaseModel):
+    resume_id: UUID
+    job_description_id: UUID
