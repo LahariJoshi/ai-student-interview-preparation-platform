@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from app.db.models.resume_analysis import ResumeAnalysis
     from app.db.models.job_description import JobDescription
     from app.db.models.ats_analysis import ATSAnalysis
+    from app.db.models.coding import CodingSubmission
 
 
 class User(Base):
@@ -43,6 +44,11 @@ class User(Base):
     )
     ats_analyses: Mapped[List["ATSAnalysis"]] = relationship(
         "ATSAnalysis",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    coding_submissions: Mapped[List["CodingSubmission"]] = relationship(
+        "CodingSubmission",
         back_populates="user",
         cascade="all, delete-orphan",
     )

@@ -5,6 +5,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.profile.router import router as profile_router
 from app.modules.resume.router import router as resume_router
 from app.modules.ats.router import router as ats_router
+from app.modules.coding.router import router as coding_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -33,6 +34,7 @@ app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(profile_router, prefix=settings.API_V1_STR)
 app.include_router(resume_router, prefix=settings.API_V1_STR)
 app.include_router(ats_router, prefix=settings.API_V1_STR)
+app.include_router(coding_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")

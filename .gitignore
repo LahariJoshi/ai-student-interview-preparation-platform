@@ -44,3 +44,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Runtime uploads
+uploads/
+
+# TypeScript build cache
+frontend/tsconfig.tsbuildinfo

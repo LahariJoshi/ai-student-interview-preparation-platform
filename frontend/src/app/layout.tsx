@@ -11,6 +11,7 @@ import {
   Sparkles,
   FileText,
   Target,
+  Code2,
 } from "lucide-react";
 
 function Navigation() {
@@ -43,6 +44,13 @@ function Navigation() {
               >
                 <Target className="w-4 h-4 text-indigo-400" />
                 ATS
+              </Link>
+              <Link
+                href="/coding"
+                className="flex items-center gap-1 text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 font-medium transition"
+              >
+                <Code2 className="w-4 h-4 text-emerald-400" />
+                Coding
               </Link>
               <Link
                 href="/profile"

@@ -1,20 +1,25 @@
-from typing import Dict
-
-from sentence_transformers import SentenceTransformer, util
+from typing import Dict, Any, Optional
 
 
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
-_model = None
+_model: Optional[Any] = None
 
 
-def get_model() -> SentenceTransformer:
+def get_model() -> Any:
     """
     Load the Sentence Transformer model once and reuse it.
     """
     global _model
 
     if _model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as e:
+            raise RuntimeError(
+                "The 'sentence-transformers' package is required for ATS semantic analysis. "
+                "Please install it via requirements.txt."
+            ) from e
         _model = SentenceTransformer(MODEL_NAME)
 
     return _model
@@ -34,6 +39,14 @@ def calculate_semantic_similarity(
 
     if not job_description or not job_description.strip():
         raise ValueError("Job description cannot be empty.")
+
+    try:
+        from sentence_transformers import util
+    except ImportError as e:
+        raise RuntimeError(
+            "The 'sentence-transformers' package is required for ATS semantic analysis. "
+            "Please install it via requirements.txt."
+        ) from e
 
     model = get_model()
 
