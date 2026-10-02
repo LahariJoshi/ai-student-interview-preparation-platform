@@ -83,8 +83,18 @@ async def create_submission(
     Validate question existence, create a new submission in 'pending' status,
     and persist to database.
     """
-    # 1. Verify question exists
-    q_stmt = select(CodingQuestion).where(CodingQuestion.id == data.question_id)
+    # 1. Verify question exists (by UUID or slug)
+    target_qid = data.question_id
+    if isinstance(target_qid, str):
+        try:
+            q_uuid = uuid.UUID(target_qid)
+            q_cond = (CodingQuestion.id == q_uuid)
+        except ValueError:
+            q_cond = (CodingQuestion.slug == target_qid)
+    else:
+        q_cond = (CodingQuestion.id == target_qid)
+
+    q_stmt = select(CodingQuestion).where(q_cond)
     q_res = await db.execute(q_stmt)
     question = q_res.scalar_one_or_none()
     if not question:
@@ -97,7 +107,7 @@ async def create_submission(
     submission = CodingSubmission(
         id=uuid.uuid4(),
         user_id=user_id,
-        question_id=data.question_id,
+        question_id=question.id,
         language=data.language.strip().lower(),
         code=data.code,
         status="pending",

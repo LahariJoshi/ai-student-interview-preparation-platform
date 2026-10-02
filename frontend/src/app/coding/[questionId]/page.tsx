@@ -106,21 +106,34 @@ export default function CodingWorkspacePage() {
     setIsRunning(true);
     setSubmission(null);
     try {
-      const result = await apiFetch<CodeRunResponse>(`/coding/questions/${question.id}/run`, {
+      const result = await apiFetch<CodeRunResponse>(`/coding/run`, {
         method: "POST",
-        body: JSON.stringify({ language, code }),
+        body: JSON.stringify({ question_id: question.id, language, code }),
       });
       setRunResult(result);
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
     } catch (err) {
+      let friendlyError = "Run execution failed.";
+      let verdict = "Execution Service Error";
+      if (err instanceof Error) {
+        if (err.message.includes("Failed to fetch") || err.message.toLowerCase().includes("network")) {
+          verdict = "Network Error";
+          friendlyError = "Unable to reach the coding execution service. Check that the backend is running and the configured API URL is reachable.";
+        } else if (err.message.includes("401") || err.message.toLowerCase().includes("unauthorized")) {
+          verdict = "Authentication Error";
+          friendlyError = "Your session has expired. Please log in to run code.";
+        } else {
+          friendlyError = err.message;
+        }
+      }
       setRunResult({
-        verdict: "Execution Failed",
+        verdict,
         passed_test_cases: 0,
         total_test_cases: question.sample_test_cases.length,
         execution_time_ms: 0,
-        error_message: err instanceof Error ? err.message : "Run execution failed.",
+        error_message: friendlyError,
         test_cases: [],
       });
     } finally {
@@ -149,14 +162,56 @@ export default function CodingWorkspacePage() {
         setQuestion((prev) => (prev ? { ...prev, is_solved: true } : null));
       }
 
-      // Refresh past submissions
+      // Optimistically update submissions count & list immediately
+      setSubmissions((prev) => {
+        const item: CodingSubmissionListItem = {
+          id: sub.id,
+          user_id: sub.user_id,
+          question_id: sub.question_id,
+          language: sub.language,
+          status: sub.status,
+          created_at: sub.created_at,
+          question_title: sub.question_title,
+          question_slug: sub.question_slug,
+          question_difficulty: sub.question_difficulty,
+          question_topic: sub.question_topic,
+          score: sub.result?.score ?? null,
+          verdict: sub.result?.verdict ?? null,
+          passed_test_cases: sub.result?.passed_test_cases ?? null,
+          total_test_cases: sub.result?.total_test_cases ?? null,
+        };
+        const filtered = prev.filter((s) => s.id !== sub.id);
+        return [item, ...filtered];
+      });
+
+      // Fetch latest from API
       fetchPastSubmissions(question.id);
 
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Submission failed.");
+      let friendlyError = "Submission failed.";
+      let verdict = "Submission Error";
+      if (err instanceof Error) {
+        if (err.message.includes("Failed to fetch") || err.message.toLowerCase().includes("network")) {
+          verdict = "Network Error";
+          friendlyError = "Unable to reach the coding execution service. Check that the backend is running and the configured API URL is reachable.";
+        } else if (err.message.includes("401") || err.message.toLowerCase().includes("unauthorized")) {
+          verdict = "Authentication Error";
+          friendlyError = "Your session has expired. Please log in to submit solutions.";
+        } else {
+          friendlyError = err.message;
+        }
+      }
+      setRunResult({
+        verdict,
+        passed_test_cases: 0,
+        total_test_cases: question.sample_test_cases.length,
+        execution_time_ms: 0,
+        error_message: friendlyError,
+        test_cases: [],
+      });
     } finally {
       setIsSubmitting(false);
     }

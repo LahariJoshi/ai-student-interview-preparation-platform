@@ -190,7 +190,7 @@ class QuestionAdminDetailOut(QuestionDetailOut):
 # ============================================================================
 
 class SubmissionCreate(BaseModel):
-    question_id: UUID = Field(..., description="ID of question being solved")
+    question_id: Any = Field(..., description="UUID or slug of question being solved")
     language: str = Field(..., description="Programming language (e.g. python, javascript, typescript, java, cpp)")
     code: str = Field(..., min_length=1, max_length=65536, description="Submitted source code")
 
@@ -240,6 +240,7 @@ class TestCaseRunResultOut(BaseModel):
 
 
 class CodeRunRequest(BaseModel):
+    question_id: Optional[Any] = Field(None, description="UUID or slug of question being run")
     language: str = Field(..., description="Programming language (e.g. python, javascript, typescript, java, cpp)")
     code: str = Field(..., min_length=1, max_length=65536, description="Source code to run")
 

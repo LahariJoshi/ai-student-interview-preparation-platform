@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.db.models.user import User
+from app.db.models.coding import CodingQuestion
 
 from app.modules.coding.schemas import (
     QuestionCreate,
@@ -555,7 +556,7 @@ async def get_submission_details(
     response_model=SubmissionListOut,
 )
 async def list_question_submissions(
-    question_id: uuid.UUID,
+    question_id: str,
     page: Optional[int] = Query(None, ge=1, description="1-indexed page number"),
     limit: int = Query(50, ge=1, le=100, description="Items per page"),
     skip: Optional[int] = Query(None, ge=0, description="Offset"),
@@ -563,6 +564,17 @@ async def list_question_submissions(
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve all submissions made by the authenticated student for a specific question."""
+    try:
+        target_qid = uuid.UUID(question_id)
+    except ValueError:
+        q_res = await db.execute(select(CodingQuestion.id).where(CodingQuestion.slug == question_id))
+        target_qid = q_res.scalar_one_or_none()
+        if not target_qid:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="Coding question not found.",
+            )
+
     if page is not None:
         effective_skip = (page - 1) * limit
         current_page = page
@@ -576,7 +588,7 @@ async def list_question_submissions(
     items, total_count = await sub_service.get_user_submissions(
         db=db,
         user_id=current_user.id,
-        question_id=question_id,
+        question_id=target_qid,
         skip=effective_skip,
         limit=limit,
     )
@@ -619,11 +631,37 @@ async def evaluate_existing_submission(
 
 
 @router.post(
+    "/run",
+    response_model=CodeRunResponse,
+)
+async def run_code(
+    payload: CodeRunRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Interactive 'Run Code' endpoint under /api/v1/coding/run.
+    Accepts question_id (UUID or slug) in the request body.
+    """
+    if not payload.question_id:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="question_id is required in request payload.",
+        )
+    return await eval_service.run_sample_code(
+        db=db,
+        question_id=payload.question_id,
+        language=payload.language,
+        code=payload.code,
+    )
+
+
+@router.post(
     "/questions/{question_id}/run",
     response_model=CodeRunResponse,
 )
 async def run_code_sample(
-    question_id: uuid.UUID,
+    question_id: str,
     payload: CodeRunRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
