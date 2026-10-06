@@ -1,3 +1,4 @@
+import asyncio
 from uuid import UUID
 from datetime import datetime, timezone
 
@@ -212,8 +213,9 @@ async def analyze_semantic_similarity(
             detail="Job description not found or access unauthorized.",
         )
 
-    # Calculate semantic similarity
-    result = calculate_semantic_similarity(
+    # Calculate semantic similarity in worker thread to prevent event-loop blocking
+    result = await asyncio.to_thread(
+        calculate_semantic_similarity,
         resume_text=resume.raw_text,
         job_description=job_description.description_text,
     )
@@ -276,9 +278,10 @@ async def analyze_ats(
             detail="Job description not found or access unauthorized.",
         )
 
-    # 4. Run complete ATS analysis
+    # 4. Run complete ATS analysis in worker thread to prevent event-loop blocking
     try:
-        result = calculate_ats_score(
+        result = await asyncio.to_thread(
+            calculate_ats_score,
             resume_text=resume.raw_text,
             job_description=job_description.description_text,
         )

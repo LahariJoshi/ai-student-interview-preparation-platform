@@ -37,6 +37,21 @@ app.include_router(ats_router, prefix=settings.API_V1_STR)
 app.include_router(coding_router, prefix=settings.API_V1_STR)
 
 
+import threading
+
+
+@app.on_event("startup")
+def preload_ats_model():
+    def _warmup():
+        try:
+            from app.modules.ats.services.semantic_analyzer import get_model
+            get_model()
+        except Exception:
+            pass
+
+    threading.Thread(target=_warmup, daemon=True, name="ats-model-prewarm").start()
+
+
 @app.get("/")
 async def root():
     return {

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Optional
 from urllib.parse import quote_plus
 
@@ -38,7 +39,11 @@ class Settings(BaseSettings):
     ATS_WEIGHT_SEMANTIC: float = 0.25
     ATS_WEIGHT_IMPACT: float = 0.15
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(Path(__file__).resolve().parent.parent.parent / ".env", ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     def get_database_url(self) -> str:
         if self.DATABASE_URL:
