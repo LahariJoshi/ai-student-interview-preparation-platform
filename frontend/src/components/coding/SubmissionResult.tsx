@@ -93,7 +93,7 @@ export default function SubmissionResult({
       return (
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-sm">
           <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-          <span>Accepted</span>
+          <span>{isSubmission ? "Accepted" : "Execution Successful"}</span>
         </div>
       );
     }
