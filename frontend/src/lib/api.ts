@@ -1,4 +1,13 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+export function getApiBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname || "localhost";
+    return `http://${host}:8000/api/v1`;
+  }
+  return "http://localhost:8000/api/v1";
+}
 
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const defaultHeaders: Record<string, string> = {
@@ -15,7 +24,7 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     credentials: "include",
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  const response = await fetch(`${getApiBaseUrl()}${endpoint}`, config);
 
   if (!response.ok) {
     let errorMessage = "An unexpected error occurred.";
