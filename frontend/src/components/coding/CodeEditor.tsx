@@ -85,8 +85,36 @@ export default function CodeEditor({
   });
   const [code, setCode] = useState<string>("");
   const [lineCount, setLineCount] = useState<number>(1);
+  const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
+  const lastTriggerRef = useRef<number>(0);
+
+  const codeRef = useRef(code);
+  const langRef = useRef(selectedLanguage);
+  const isRunningRef = useRef(isRunning);
+  const isSubmittingRef = useRef(isSubmitting);
+  const onRunCodeRef = useRef(onRunCode);
+  const onSubmitCodeRef = useRef(onSubmitCode);
+
+  useEffect(() => {
+    codeRef.current = code;
+  }, [code]);
+  useEffect(() => {
+    langRef.current = selectedLanguage;
+  }, [selectedLanguage]);
+  useEffect(() => {
+    isRunningRef.current = isRunning;
+  }, [isRunning]);
+  useEffect(() => {
+    isSubmittingRef.current = isSubmitting;
+  }, [isSubmitting]);
+  useEffect(() => {
+    onRunCodeRef.current = onRunCode;
+  }, [onRunCode]);
+  useEffect(() => {
+    onSubmitCodeRef.current = onSubmitCode;
+  }, [onSubmitCode]);
 
   // Sync controlled language if changed from parent
   useEffect(() => {
@@ -123,24 +151,94 @@ export default function CodeEditor({
     }
   };
 
-  // Handle Tab key indentation
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Run shortcut: Ctrl+Enter or Cmd+Enter
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (!isRunning && !isSubmitting) {
-        onRunCode(selectedLanguage, code);
-      }
-      return;
-    }
+  const triggerRun = () => {
+    const now = Date.now();
+    if (now - lastTriggerRef.current < 300) return;
+    lastTriggerRef.current = now;
 
-    // Submit shortcut: Ctrl+Shift+Enter or Cmd+Shift+Enter
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && e.shiftKey) {
-      e.preventDefault();
-      if (!isRunning && !isSubmitting) {
-        onSubmitCode(selectedLanguage, code);
+    const currentCode = codeRef.current;
+    const currentLang = langRef.current;
+    if (isRunningRef.current || isSubmittingRef.current || !currentCode.trim()) return;
+
+    onRunCodeRef.current(currentLang, currentCode);
+  };
+
+  const triggerSubmit = () => {
+    const now = Date.now();
+    if (now - lastTriggerRef.current < 300) return;
+    lastTriggerRef.current = now;
+
+    const currentCode = codeRef.current;
+    const currentLang = langRef.current;
+    if (isRunningRef.current || isSubmittingRef.current || !currentCode.trim()) return;
+
+    onSubmitCodeRef.current(currentLang, currentCode);
+  };
+
+  // Keyboard shortcut listener scoped to the code editor
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Support both Windows/Linux (Ctrl) and macOS (Cmd)
+      const isModifier = e.ctrlKey || e.metaKey;
+      const isEnter =
+        e.key === "Enter" ||
+        e.code === "Enter" ||
+        e.code === "NumpadEnter" ||
+        (e as any).keyCode === 13;
+
+      if (!isModifier || !isEnter) return;
+
+      const activeEl = document.activeElement;
+      const isEditorFocused =
+        activeEl === textareaRef.current ||
+        (containerRef.current !== null && containerRef.current.contains(activeEl));
+
+      // Do not trigger from unrelated input fields or textareas
+      if (!isEditorFocused) return;
+
+      // Prevent duplicate execution if already handled
+      if (e.defaultPrevented) return;
+
+      // Check submission shortcut before run shortcut
+      if (e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerSubmit();
+      } else {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerRun();
       }
-      return;
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, []);
+
+  // Handle Tab key indentation and keyboard shortcuts within textarea
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isModifier = e.ctrlKey || e.metaKey;
+    const isEnter =
+      e.key === "Enter" ||
+      e.code === "Enter" ||
+      e.code === "NumpadEnter" ||
+      (e as any).keyCode === 13;
+
+    if (isModifier && isEnter) {
+      // Check submission shortcut before run shortcut
+      if (e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerSubmit();
+        return;
+      } else {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerRun();
+        return;
+      }
     }
 
     // Tab indentation
@@ -195,7 +293,10 @@ export default function CodeEditor({
   };
 
   return (
-    <div className="glass-card flex flex-col h-full overflow-hidden border border-slate-800">
+    <div
+      ref={containerRef}
+      className="glass-card flex flex-col h-full overflow-hidden border border-slate-800"
+    >
       {/* Editor Top Toolbar */}
       <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-3">
@@ -249,7 +350,10 @@ export default function CodeEditor({
       </div>
 
       {/* Editor Workspace with Line Numbers */}
-      <div className="relative flex-1 min-h-[360px] bg-slate-950 flex overflow-hidden font-mono text-xs">
+      <div
+        onClick={() => textareaRef.current?.focus()}
+        className="relative flex-1 min-h-[360px] bg-slate-950 flex overflow-hidden font-mono text-xs cursor-text"
+      >
         {/* Line Numbers Gutter */}
         <div
           ref={lineNumbersRef}
@@ -290,7 +394,7 @@ export default function CodeEditor({
         <div className="flex items-center gap-3">
           {/* Run Button */}
           <button
-            onClick={() => onRunCode(selectedLanguage, code)}
+            onClick={() => triggerRun()}
             disabled={isRunning || isSubmitting || !code.trim()}
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition disabled:opacity-50"
           >
@@ -300,7 +404,7 @@ export default function CodeEditor({
 
           {/* Submit Button */}
           <button
-            onClick={() => onSubmitCode(selectedLanguage, code)}
+            onClick={() => triggerSubmit()}
             disabled={isRunning || isSubmitting || !code.trim()}
             className="inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition shadow-sm disabled:opacity-50"
           >
