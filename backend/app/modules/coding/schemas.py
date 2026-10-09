@@ -73,7 +73,7 @@ ALLOWED_DIFFICULTIES = {"Easy", "Medium", "Hard"}
 ALLOWED_STATUSES = {"all", "solved", "unsolved"}
 ALLOWED_SORT_FIELDS = {"created_at", "title", "difficulty"}
 ALLOWED_SORT_ORDERS = {"asc", "desc"}
-ALLOWED_LANGUAGES = {"python", "javascript", "typescript", "java", "cpp"}
+ALLOWED_LANGUAGES = {"python", "javascript", "typescript", "java", "cpp", "rust"}
 ALLOWED_SUBMISSION_STATUSES = {"pending", "running", "completed", "failed"}
 
 

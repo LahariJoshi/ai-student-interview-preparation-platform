@@ -46,21 +46,21 @@ const SUPPORTED_LANGUAGES: LanguageOption[] = [
   },
   {
     value: "typescript",
-    label: "TypeScript (Coming Soon)",
+    label: "TypeScript",
     defaultCode: `function solve(input: string): void {\n  // Write your solution here\n}\n`,
-    supported: false,
+    supported: true,
   },
   {
     value: "java",
-    label: "Java 17 (Coming Soon)",
+    label: "Java 17",
     defaultCode: `import java.util.*;\nimport java.io.*;\n\npublic class Solution {\n    public static void main(String[] args) throws Exception {\n        Scanner scanner = new Scanner(System.in);\n        // Read input and print answer\n    }\n}\n`,
-    supported: false,
+    supported: true,
   },
   {
     value: "cpp",
-    label: "C++ (GCC) (Coming Soon)",
+    label: "C++ (GCC)",
     defaultCode: `#include <iostream>\n#include <vector>\n#include <string>\n\nusing namespace std;\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    // Read input and print output\n    return 0;\n}\n`,
-    supported: false,
+    supported: true,
   },
 ];
 

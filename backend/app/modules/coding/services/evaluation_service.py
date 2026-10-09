@@ -1122,6 +1122,170 @@ async def execute_javascript_test_case(
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+TS_RUNNER_TEMPLATE = r"""
+(function() {
+    const fs = require('fs');
+    const rawInput = fs.readFileSync(0, 'utf8').trim();
+
+    let targetFn = null;
+
+    // 1. Check for Solution class
+    try {
+        const solClass = eval('typeof Solution !== "undefined" ? Solution : null');
+        if (solClass && typeof solClass === 'function') {
+            const inst = new solClass();
+            const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(inst)).filter(m => m !== 'constructor');
+            if (methods.length > 0 && typeof inst[methods[0]] === 'function') {
+                targetFn = inst[methods[0]].bind(inst);
+            }
+        }
+    } catch (e) {}
+
+    // 2. Candidate function names extracted by regex
+    if (!targetFn && typeof __CANDIDATE_FNS__ !== 'undefined' && Array.isArray(__CANDIDATE_FNS__)) {
+        for (const name of __CANDIDATE_FNS__) {
+            try {
+                const fn = eval('typeof ' + name + ' !== "undefined" ? ' + name + ' : null');
+                if (fn && typeof fn === 'function') {
+                    targetFn = fn;
+                    break;
+                }
+            } catch (e) {}
+        }
+    }
+
+    if (!targetFn) return;
+
+    function parseArg(s) {
+        s = s.trim();
+        try { return JSON.parse(s); } catch (e) {}
+        return s;
+    }
+
+    const lines = rawInput.split(/\r?\n/).filter(l => l.trim().length > 0);
+    const parsedArgs = lines.map(parseArg);
+
+    let res;
+    if (parsedArgs.length === targetFn.length) {
+        res = targetFn(...parsedArgs);
+    } else if (parsedArgs.length === 1 && targetFn.length > 1 && Array.isArray(parsedArgs[0])) {
+        res = targetFn(...parsedArgs[0]);
+    } else {
+        res = targetFn(...parsedArgs);
+    }
+
+    if (res !== undefined) {
+        if (typeof res === 'object') {
+            process.stdout.write(JSON.stringify(res));
+        } else {
+            process.stdout.write(String(res));
+        }
+    }
+})();
+"""
+
+
+async def execute_typescript_test_case(
+    code: str,
+    input_data: str,
+    expected_output: str,
+    is_sample: bool,
+    time_limit_sec: float,
+) -> Dict[str, Any]:
+    """Execute TypeScript code using Node.js with native type-stripping in an isolated directory."""
+    node_path = shutil.which("node")
+    if not node_path:
+        return {
+            "passed": False,
+            "verdict": "Compilation Error",
+            "execution_time_ms": 0.0,
+            "actual_output": None,
+            "expected_output": expected_output if is_sample else None,
+            "input_data": input_data if is_sample else None,
+            "error_message": "Node.js runtime is not installed on server.",
+        }
+
+    temp_dir = tempfile.mkdtemp(prefix="coding_ts_sandbox_")
+
+    try:
+        solution_path = os.path.join(temp_dir, "solution.ts")
+
+        has_stdin_handling = any(k in code for k in ("process.stdin", "readline", "readFileSync(0"))
+        if has_stdin_handling:
+            code_to_run = code
+        else:
+            fn_matches = re.findall(r"(?:function|(?:const|let|var))\s+([A-Za-z0-9_]+)", code)
+            class_matches = re.findall(r"class\s+([A-Za-z0-9_]+)", code)
+            candidates = list(dict.fromkeys(fn_matches + class_matches))
+            candidate_js = "\nconst __CANDIDATE_FNS__ = " + json.dumps(candidates) + ";\n"
+            code_to_run = code + candidate_js + TS_RUNNER_TEMPLATE
+
+        with open(solution_path, "w", encoding="utf-8") as f:
+            f.write(code_to_run)
+
+        clean_env = {
+            "SYSTEMROOT": os.environ.get("SYSTEMROOT", "C:\\Windows"),
+            "PATH": os.environ.get("PATH", ""),
+        }
+
+        returncode, actual_output, stderr_text, timed_out, exec_time_ms = await asyncio.to_thread(
+            run_subprocess_sync,
+            cmd=[node_path, "--no-warnings", "--experimental-strip-types", "solution.ts"],
+            input_str=input_data,
+            cwd=temp_dir,
+            env=clean_env,
+            timeout_sec=time_limit_sec,
+        )
+
+        if timed_out:
+            return {
+                "passed": False,
+                "verdict": "Time Limit Exceeded",
+                "execution_time_ms": time_limit_sec * 1000,
+                "actual_output": None,
+                "expected_output": expected_output if is_sample else None,
+                "input_data": input_data if is_sample else None,
+                "error_message": f"Time limit exceeded ({time_limit_sec}s).",
+            }
+
+        if "Output Limit Exceeded" in stderr_text:
+            return {
+                "passed": False,
+                "verdict": "Output Limit Exceeded",
+                "execution_time_ms": exec_time_ms,
+                "actual_output": None,
+                "expected_output": expected_output if is_sample else None,
+                "input_data": input_data if is_sample else None,
+                "error_message": f"Output limit exceeded (maximum {MAX_OUTPUT_BYTES // 1024} KB).",
+            }
+
+        if returncode != 0:
+            verdict = "Compilation Error" if "SyntaxError" in stderr_text else "Runtime Error"
+            return {
+                "passed": False,
+                "verdict": verdict,
+                "execution_time_ms": exec_time_ms,
+                "actual_output": None,
+                "expected_output": expected_output if is_sample else None,
+                "input_data": input_data if is_sample else None,
+                "error_message": stderr_text.strip() or "TypeScript execution error.",
+            }
+
+        passed = outputs_match(actual_output, expected_output)
+        return {
+            "passed": passed,
+            "verdict": "Passed" if passed else "Wrong Answer",
+            "execution_time_ms": exec_time_ms,
+            "actual_output": actual_output.strip() if is_sample else None,
+            "expected_output": expected_output if is_sample else None,
+            "input_data": input_data if is_sample else None,
+            "error_message": None if passed else "Output does not match expected output.",
+        }
+
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 async def execute_java_test_case(
     code: str,
     input_data: str,
@@ -1319,14 +1483,14 @@ async def execute_cpp_test_case(
             cmd=[compiler_path, "-O2", "solution.cpp", "-o", "solution.exe"],
             cwd=temp_dir,
             env=clean_env,
-            timeout_sec=8.0,
+            timeout_sec=12.0,
         )
 
         if c_timed_out:
             return {
                 "passed": False,
                 "verdict": "Compilation Error",
-                "execution_time_ms": 8000.0,
+                "execution_time_ms": 12000.0,
                 "actual_output": None,
                 "expected_output": expected_output if is_sample else None,
                 "input_data": input_data if is_sample else None,
@@ -1419,6 +1583,14 @@ async def execute_test_case(
             is_sample=is_sample,
             time_limit_sec=time_limit_sec,
         )
+    elif lang == "typescript":
+        return await execute_typescript_test_case(
+            code=code,
+            input_data=input_data,
+            expected_output=expected_output,
+            is_sample=is_sample,
+            time_limit_sec=time_limit_sec,
+        )
     elif lang == "java":
         return await execute_java_test_case(
             code=code,
@@ -1505,7 +1677,7 @@ async def evaluate_submission(
 
     if lang == "python":
         security_verdict, security_error = validate_python_code_security(submission.code)
-    elif lang == "javascript":
+    elif lang in ("javascript", "typescript"):
         security_verdict, security_error = validate_javascript_code_security(submission.code)
 
     test_case_results = []
@@ -1668,7 +1840,7 @@ async def run_sample_code(
 
     if lang == "python":
         security_verdict, security_error = validate_python_code_security(code)
-    elif lang == "javascript":
+    elif lang in ("javascript", "typescript"):
         security_verdict, security_error = validate_javascript_code_security(code)
 
     if security_verdict:

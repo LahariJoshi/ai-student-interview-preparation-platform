@@ -551,7 +551,7 @@ async def test_evaluate_submission_unsupported_language_environment(
 
     create_res = await async_client.post(
         "/api/v1/coding/submissions",
-        json={"question_id": str(question.id), "language": "typescript", "code": "console.log('hi');"},
+        json={"question_id": str(question.id), "language": "rust", "code": "fn main() { println!(\"hi\"); }"},
         cookies=cookies,
     )
     assert create_res.status_code == 201
@@ -565,7 +565,7 @@ async def test_evaluate_submission_unsupported_language_environment(
     data = eval_res.json()
     assert data["status"] == "completed"
     assert data["result"]["verdict"] == "Compilation Error"
-    assert "Execution environment for language 'typescript' is not configured on this host" in data["result"]["error_message"]
+    assert "Execution environment for language 'rust' is not configured on this host" in data["result"]["error_message"]
 
 
 async def test_evaluate_submission_output_limit_exceeded_python(

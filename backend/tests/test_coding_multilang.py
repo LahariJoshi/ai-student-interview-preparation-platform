@@ -100,3 +100,95 @@ class Solution:
     assert result["passed"] is True
     assert result["verdict"] == "Passed"
     assert result["actual_output"] == "30"
+
+
+@pytest.mark.asyncio
+async def test_typescript_execution_success():
+    """Verify that TypeScript code with type annotations and Solution class executes properly."""
+    code = """
+interface Calculator {
+    add(a: number, b: number): number;
+}
+
+class Solution implements Calculator {
+    add(a: number, b: number): number {
+        return a + b;
+    }
+}
+"""
+    result = await execute_test_case(
+        code=code,
+        language="typescript",
+        input_data="12\n18",
+        expected_output="30",
+        is_sample=True,
+    )
+    assert result["passed"] is True
+    assert result["verdict"] == "Passed"
+    assert result["actual_output"] == "30"
+
+
+@pytest.mark.asyncio
+async def test_typescript_runtime_error():
+    """Verify that unhandled TypeScript runtime exceptions return Runtime Error."""
+    code = """
+class Solution {
+    solve(x: number): number {
+        throw new Error("Custom TS runtime exception");
+    }
+}
+"""
+    result = await execute_test_case(
+        code=code,
+        language="typescript",
+        input_data="5",
+        expected_output="5",
+        is_sample=True,
+    )
+    assert result["passed"] is False
+    assert result["verdict"] == "Runtime Error"
+    assert "Custom TS runtime exception" in result["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_typescript_time_limit_exceeded():
+    """Verify that infinite loops in TypeScript code trigger Time Limit Exceeded."""
+    code = """
+class Solution {
+    solve(x: number): number {
+        while (true) {}
+        return x;
+    }
+}
+"""
+    result = await execute_test_case(
+        code=code,
+        language="typescript",
+        input_data="1",
+        expected_output="1",
+        is_sample=True,
+        time_limit_sec=1.0,
+    )
+    assert result["passed"] is False
+    assert result["verdict"] == "Time Limit Exceeded"
+
+
+@pytest.mark.asyncio
+async def test_typescript_output_limit_exceeded():
+    """Verify that excessive output in TypeScript triggers Output Limit Exceeded."""
+    code = """
+import * as fs from 'fs';
+for (let i = 0; i < 1000; i++) {
+    console.log("X".repeat(200));
+}
+"""
+    result = await execute_test_case(
+        code=code,
+        language="typescript",
+        input_data="",
+        expected_output="",
+        is_sample=True,
+        time_limit_sec=3.0,
+    )
+    assert result["passed"] is False
+    assert result["verdict"] == "Output Limit Exceeded"
