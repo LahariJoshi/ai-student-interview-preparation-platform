@@ -82,6 +82,24 @@ export default function HomePage() {
             Practice technical problem-solving with Monaco editor and instant test case execution.
           </p>
         </div>
+
+        <div className="glass-card p-6 space-y-3 md:col-span-3">
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-lg bg-amber-900/50 border border-amber-700 flex items-center justify-center text-amber-400">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <Link
+              href="/interview"
+              className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-semibold"
+            >
+              Start Session &rarr;
+            </Link>
+          </div>
+          <h3 className="text-lg font-bold text-white">Interactive AI Mock Interview Studio</h3>
+          <p className="text-slate-400 text-sm">
+            Realistic mock interview simulations for SDE, Python, Java, and AI roles. Features voice answer mode, transparent rubric evaluations, delivery metrics, and customized revision roadmaps.
+          </p>
+        </div>
       </section>
     </div>
   );

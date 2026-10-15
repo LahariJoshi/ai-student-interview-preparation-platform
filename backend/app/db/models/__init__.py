@@ -10,6 +10,11 @@ from app.db.models.coding import (
     CodingSubmission,
     CodingResult,
 )
+from app.db.models.interview import (
+    InterviewSession,
+    InterviewQuestion,
+    InterviewAnswer,
+)
 
 __all__ = [
     "User",
@@ -22,4 +27,7 @@ __all__ = [
     "CodingTestCase",
     "CodingSubmission",
     "CodingResult",
+    "InterviewSession",
+    "InterviewQuestion",
+    "InterviewAnswer",
 ]

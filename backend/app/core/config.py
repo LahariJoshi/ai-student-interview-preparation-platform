@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     ATS_WEIGHT_SEMANTIC: float = 0.25
     ATS_WEIGHT_IMPACT: float = 0.15
 
+    # Mock Interview Settings
+    INTERVIEW_AUDIO_DIR: str = "uploads/interview_audio"
+    MAX_AUDIO_SIZE_MB: int = 15
+    OPENAI_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
+    LLM_PROVIDER: str = "auto"  # auto, openai, gemini, offline
+
     model_config = SettingsConfigDict(
         env_file=(Path(__file__).resolve().parent.parent.parent / ".env", ".env"),
         env_file_encoding="utf-8",
