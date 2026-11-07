@@ -8,13 +8,14 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Response,
     status,
     UploadFile,
     File,
 )
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete, update
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -23,6 +24,8 @@ from app.core.security import get_current_user
 from app.db.models.user import User
 from app.db.models.resume import Resume
 from app.db.models.resume_analysis import ResumeAnalysis
+from app.db.models.ats_analysis import ATSAnalysis
+from app.db.models.interview import InterviewSession
 
 from app.modules.resume.schemas import (
     ResumeOut,
@@ -79,6 +82,13 @@ def sanitize_filename(filename: str) -> str:
     return clean_name or "uploaded_resume.pdf"
 
 
+def set_no_cache_headers(response: Response) -> None:
+    """Ensure client and intermediate proxies do not cache dynamic resume state."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+
 # ============================================================================
 # UPLOAD RESUME
 # ============================================================================
@@ -89,10 +99,12 @@ def sanitize_filename(filename: str) -> str:
     status_code=status.HTTP_201_CREATED,
 )
 async def upload_resume(
+    response: Response,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    set_no_cache_headers(response)
     # 1. Enforce maximum resume count
     count_query = select(func.count(Resume.id)).where(
         Resume.user_id == current_user.id
@@ -256,9 +268,12 @@ async def upload_resume(
     response_model=ResumeListOut,
 )
 async def get_my_resumes(
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    set_no_cache_headers(response)
+
     result = await db.execute(
         select(Resume)
         .where(Resume.user_id == current_user.id)
@@ -283,9 +298,13 @@ async def get_my_resumes(
 )
 async def delete_resume(
     resume_id: uuid.UUID,
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    set_no_cache_headers(response)
+
+    # 1. Fetch resume and verify strict ownership
     result = await db.execute(
         select(Resume).where(
             Resume.id == resume_id,
@@ -301,16 +320,56 @@ async def delete_resume(
             detail="Resume not found or access unauthorized.",
         )
 
-    # Delete physical file
-    if os.path.exists(resume.file_path):
-        try:
-            os.remove(resume.file_path)
-        except OSError:
-            pass
+    # 2. Clean up referencing records across all application modules
+    # Detach linked interview sessions by setting resume_id to NULL
+    await db.execute(
+        update(InterviewSession)
+        .where(InterviewSession.resume_id == resume_id)
+        .values(resume_id=None)
+    )
 
-    # Delete database record
+    # Delete ATS analysis records tied to this resume
+    await db.execute(
+        delete(ATSAnalysis).where(ATSAnalysis.resume_id == resume_id)
+    )
+
+    # Delete ResumeAnalysis records tied to this resume
+    await db.execute(
+        delete(ResumeAnalysis).where(ResumeAnalysis.resume_id == resume_id)
+    )
+
+    # 3. Permanently remove physical file from server storage
+    candidate_file_paths = {
+        resume.file_path,
+        os.path.abspath(resume.file_path),
+        os.path.join(settings.UPLOADS_DIR, str(current_user.id), resume.stored_filename),
+        os.path.abspath(os.path.join(settings.UPLOADS_DIR, str(current_user.id), resume.stored_filename)),
+        os.path.join("backend", settings.UPLOADS_DIR, str(current_user.id), resume.stored_filename),
+        os.path.abspath(os.path.join("backend", settings.UPLOADS_DIR, str(current_user.id), resume.stored_filename)),
+    }
+    for file_p in candidate_file_paths:
+        if file_p and os.path.isfile(file_p):
+            try:
+                os.remove(file_p)
+            except OSError:
+                pass
+
+    # Clean up empty user upload directory if no files remain
+    user_upload_dirs = {
+        os.path.dirname(resume.file_path),
+        os.path.join(settings.UPLOADS_DIR, str(current_user.id)),
+        os.path.join("backend", settings.UPLOADS_DIR, str(current_user.id)),
+    }
+    for udir in user_upload_dirs:
+        if udir and os.path.isdir(udir):
+            try:
+                if not os.listdir(udir):
+                    os.rmdir(udir)
+            except OSError:
+                pass
+
+    # 4. Permanently delete database record
     await db.delete(resume)
-
     await db.commit()
 
     return {
@@ -346,11 +405,28 @@ async def extract_resume_text(
             detail="Resume not found or access unauthorized.",
         )
 
-    if not os.path.exists(resume.file_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Resume file not found on the server.",
-        )
+    file_path_to_use = resume.file_path
+    if not os.path.exists(file_path_to_use):
+        candidate_paths = [
+            os.path.abspath(resume.file_path),
+            os.path.join(settings.UPLOADS_DIR, str(current_user.id), resume.stored_filename),
+            os.path.abspath(os.path.join(settings.UPLOADS_DIR, str(current_user.id), resume.stored_filename)),
+            os.path.join("backend", settings.UPLOADS_DIR, str(current_user.id), resume.stored_filename),
+            os.path.abspath(os.path.join("backend", settings.UPLOADS_DIR, str(current_user.id), resume.stored_filename)),
+        ]
+        found = False
+        for alt_path in candidate_paths:
+            if alt_path and os.path.isfile(alt_path):
+                file_path_to_use = alt_path
+                resume.file_path = alt_path
+                found = True
+                break
+
+        if not found:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Resume file not found on the server.",
+            )
 
     try:
 
@@ -625,6 +701,30 @@ async def analyze_resume_endpoint(
 # ============================================================================
 # GET STORED ANALYSIS
 # ============================================================================
+
+@router.get("/latest/analysis")
+async def get_latest_resume_analysis(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    set_no_cache_headers(response)
+
+    result = await db.execute(
+        select(ResumeAnalysis)
+        .join(Resume, ResumeAnalysis.resume_id == Resume.id)
+        .where(
+            ResumeAnalysis.user_id == current_user.id,
+            Resume.user_id == current_user.id,
+        )
+        .order_by(ResumeAnalysis.created_at.desc())
+        .limit(1)
+    )
+    analysis = result.scalar_one_or_none()
+    if not analysis:
+        return None
+    return analysis
+
 
 @router.get(
     "/{resume_id}/analysis",

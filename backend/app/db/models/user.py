@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.db.models.ats_analysis import ATSAnalysis
     from app.db.models.coding import CodingSubmission
     from app.db.models.interview import InterviewSession
+    from app.db.models.password_reset import PasswordResetToken
 
 
 class User(Base):
@@ -55,6 +56,11 @@ class User(Base):
     )
     interview_sessions: Mapped[List["InterviewSession"]] = relationship(
         "InterviewSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    password_reset_tokens: Mapped[List["PasswordResetToken"]] = relationship(
+        "PasswordResetToken",
         back_populates="user",
         cascade="all, delete-orphan",
     )

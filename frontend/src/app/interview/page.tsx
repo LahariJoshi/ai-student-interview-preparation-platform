@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -11,9 +11,9 @@ import {
   History,
   FileText,
   AlertCircle,
-  Briefcase,
   Sliders,
   CheckCircle2,
+  Mic,
 } from "lucide-react";
 import { InterviewSessionOut } from "@/types/interview";
 
@@ -36,8 +36,39 @@ export default function InterviewSetupPage() {
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
 
   const [isLoadingResumes, setIsLoadingResumes] = useState<boolean>(false);
+  const [resumeError, setResumeError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const loadResumes = useCallback(async () => {
+    setIsLoadingResumes(true);
+    setResumeError(null);
+    try {
+      const data = await apiFetch<any>(`/resume/my-resumes?t=${Date.now()}`, {
+        cache: "no-store",
+      });
+      const list: ResumeItem[] = Array.isArray(data) ? data : data?.resumes || [];
+      setResumes(list);
+
+      // Re-evaluate selected resume against the fresh list
+      setSelectedResumeId((prev) => {
+        if (!prev) {
+          return list.length > 0 ? list[0].id : "";
+        }
+        const exists = list.some((r) => r.id === prev);
+        if (exists) {
+          return prev;
+        }
+        return list.length > 0 ? list[0].id : "";
+      });
+    } catch (err: any) {
+      setResumeError(err.message || "Failed to load active resumes.");
+      setResumes([]);
+      setSelectedResumeId("");
+    } finally {
+      setIsLoadingResumes(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -47,23 +78,40 @@ export default function InterviewSetupPage() {
 
     if (user) {
       loadResumes();
-    }
-  }, [user, authLoading]);
 
-  const loadResumes = async () => {
-    setIsLoadingResumes(true);
-    try {
-      const data = await apiFetch<ResumeItem[]>("/resume");
-      setResumes(data || []);
-      if (data && data.length > 0) {
-        setSelectedResumeId(data[0].id);
-      }
-    } catch (e) {
-      // Non-fatal if student has not uploaded a resume yet
-    } finally {
-      setIsLoadingResumes(false);
+      // Cross-component and cross-tab immediate synchronization
+      const handleResumesUpdated = () => {
+        loadResumes();
+      };
+
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === "last_resume_update") {
+          loadResumes();
+        }
+      };
+
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          loadResumes();
+        }
+      };
+
+      window.addEventListener("resumes_updated", handleResumesUpdated);
+      window.addEventListener("storage", handleStorageChange);
+      window.addEventListener("focus", handleResumesUpdated);
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+
+      return () => {
+        window.removeEventListener("resumes_updated", handleResumesUpdated);
+        window.removeEventListener("storage", handleStorageChange);
+        window.removeEventListener("focus", handleResumesUpdated);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      };
+    } else {
+      setResumes([]);
+      setSelectedResumeId("");
     }
-  };
+  }, [user, authLoading, loadResumes, router]);
 
   const handleStartInterview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,64 +146,63 @@ export default function InterviewSetupPage() {
 
   if (authLoading) {
     return (
-      <div className="py-20 text-center text-slate-400">
-        <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        Checking credentials...
+      <div className="py-20 text-center text-[#8993A0]">
+        <div className="w-8 h-8 border-2 border-[#123E63] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-xs font-semibold">Authenticating student session...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-4 space-y-8">
+    <div className="space-y-6 max-w-4xl">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-card border border-[#E5E9EF] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-950/80 border border-sky-800 text-sky-300 text-xs font-semibold mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-            AI Placement Preparation
-          </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#123E63]/10 border border-[#123E63]/20 text-[#123E63] text-xs font-semibold mb-2">
+            <Mic className="w-3.5 h-3.5 text-[#F5A623]" />
             AI Mock Interview Studio
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Configure your personalized mock interview session tailored to your target role, difficulty, and resume.
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#202B38] tracking-tight">
+            Interview Simulation Configuration
+          </h2>
+          <p className="text-xs sm:text-sm text-[#8993A0] mt-1">
+            Simulate realistic technical and behavioral interview rounds with automated speech analysis and instant scoring.
           </p>
         </div>
 
         <Link
           href="/interview/history"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-sm font-medium rounded-xl transition"
+          className="px-4 py-2.5 rounded-xl bg-[#F8F9FA] hover:bg-[#EAEFF5] text-[#123E63] border border-[#E5E9EF] text-xs font-bold transition flex items-center gap-1.5 self-start sm:self-auto shrink-0"
         >
-          <History className="w-4 h-4 text-sky-400" />
-          <span>Past Sessions & Trends</span>
+          <History className="w-3.5 h-3.5 text-[#F5A623]" />
+          <span>Past Sessions</span>
         </Link>
       </div>
 
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300 flex items-start gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 flex items-start gap-2.5 text-xs font-semibold">
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Configuration Form */}
       <form onSubmit={handleStartInterview} className="space-y-6">
-        <div className="glass-card p-6 md:p-8 space-y-6">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
-            <Sliders className="w-5 h-5 text-sky-400" />
-            Interview Parameters
-          </h2>
+        <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-card border border-[#E5E9EF] space-y-6">
+          <div className="flex items-center gap-2 border-b border-[#E5E9EF] pb-3">
+            <Sliders className="w-4 h-4 text-[#123E63]" />
+            <h3 className="text-base font-bold text-[#202B38]">Session Parameters</h3>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Target Role */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">
-                Target Role / Job Title
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-[#8993A0] uppercase tracking-wider block">
+                Target Role / Track
               </label>
               <select
                 value={targetRole}
                 onChange={(e) => setTargetRole(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 text-sm"
+                className="w-full bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl px-3.5 py-2.5 text-xs font-medium text-[#202B38] focus:outline-none focus:border-[#123E63]"
               >
                 <option value="Software Developer">Software Developer (General SDE)</option>
                 <option value="Python Developer">Python Developer</option>
@@ -166,32 +213,30 @@ export default function InterviewSetupPage() {
               </select>
             </div>
 
-            {/* Interview Type */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-[#8993A0] uppercase tracking-wider block">
                 Interview Type
               </label>
               <select
                 value={interviewType}
                 onChange={(e) => setInterviewType(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 text-sm"
+                className="w-full bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl px-3.5 py-2.5 text-xs font-medium text-[#202B38] focus:outline-none focus:border-[#123E63]"
               >
                 <option value="mixed">Mixed (Technical + Behavioral + Project)</option>
-                <option value="technical">Technical Only (Core CS & Architecture)</option>
-                <option value="behavioral">Behavioral (STAR Method & Collaboration)</option>
+                <option value="technical">Technical Only (Data Structures & Systems)</option>
+                <option value="behavioral">Behavioral (STAR Method & Problem Solving)</option>
                 <option value="hr">HR & Cultural Fit</option>
               </select>
             </div>
 
-            {/* Experience Level */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">
-                Experience Level
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-[#8993A0] uppercase tracking-wider block">
+                Candidate Level
               </label>
               <select
                 value={experienceLevel}
                 onChange={(e) => setExperienceLevel(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 text-sm"
+                className="w-full bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl px-3.5 py-2.5 text-xs font-medium text-[#202B38] focus:outline-none focus:border-[#123E63]"
               >
                 <option value="Beginner">Beginner (College Student / Fresher)</option>
                 <option value="Intermediate">Intermediate (1-2 Years / Internships)</option>
@@ -199,15 +244,14 @@ export default function InterviewSetupPage() {
               </select>
             </div>
 
-            {/* Duration */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">
-                Interview Duration
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-[#8993A0] uppercase tracking-wider block">
+                Session Length
               </label>
               <select
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 text-sm"
+                className="w-full bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl px-3.5 py-2.5 text-xs font-medium text-[#202B38] focus:outline-none focus:border-[#123E63]"
               >
                 <option value={10}>10 Minutes (Quick 3-Question Practice)</option>
                 <option value={15}>15 Minutes (Standard 5-Question Session)</option>
@@ -216,51 +260,61 @@ export default function InterviewSetupPage() {
             </div>
           </div>
 
-          {/* Custom Skills */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">
-              Focus Skills or Technologies (Optional, comma-separated)
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-[#8993A0] uppercase tracking-wider block">
+              Focus Skills (Optional, comma-separated)
             </label>
             <input
               type="text"
               placeholder="e.g. React, PostgreSQL, Docker, FastApi, System Design"
               value={skillsInput}
               onChange={(e) => setSkillsInput(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 text-sm"
+              className="w-full bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl px-3.5 py-2.5 text-xs font-medium text-[#202B38] focus:outline-none focus:border-[#123E63]"
             />
           </div>
 
-          {/* Optional Resume Linkage */}
-          <div className="space-y-3 pt-2 border-t border-slate-800">
+          <div className="space-y-2 pt-3 border-t border-[#E5E9EF]">
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-sky-400" />
-                  Personalize with Uploaded Resume
-                </h3>
-                <p className="text-xs text-slate-400">
-                  When selected, questions will directly incorporate projects and technical proficiencies from your resume.
-                </p>
-              </div>
+              <label className="text-[11px] font-bold text-[#8993A0] uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-[#123E63]" />
+                Personalize with Uploaded Resume
+              </label>
+              {isLoadingResumes && (
+                <span className="text-[11px] text-[#8993A0] flex items-center gap-1">
+                  <span className="w-3 h-3 border-2 border-[#123E63] border-t-transparent rounded-full animate-spin inline-block" />
+                  Syncing resumes...
+                </span>
+              )}
             </div>
+            <p className="text-[11px] text-[#8993A0]">
+              When selected, questions will directly reference projects and technical experience from your resume.
+            </p>
 
-            {resumes.length > 0 ? (
-              <select
-                value={selectedResumeId}
-                onChange={(e) => setSelectedResumeId(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500"
-              >
-                <option value="">Do not use resume (Generic Questions)</option>
-                {resumes.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.original_filename} (Uploaded: {new Date(r.created_at).toLocaleDateString()})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <div className="p-3 bg-slate-900/60 rounded-lg border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-                <span>No uploaded resume found.</span>
-                <Link href="/resume" className="text-sky-400 hover:underline">
+            {resumeError && (
+              <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{resumeError}</span>
+              </div>
+            )}
+
+            <select
+              value={selectedResumeId}
+              onChange={(e) => setSelectedResumeId(e.target.value)}
+              disabled={isLoadingResumes}
+              className="w-full bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl px-3.5 py-2.5 text-xs font-medium text-[#202B38] focus:outline-none focus:border-[#123E63] disabled:opacity-60"
+            >
+              <option value="">Do not use resume (Generic Questions)</option>
+              {resumes.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.original_filename} (Uploaded: {new Date(r.created_at).toLocaleDateString()})
+                </option>
+              ))}
+            </select>
+
+            {resumes.length === 0 && !isLoadingResumes && (
+              <div className="p-3 bg-[#F8F9FA] rounded-xl border border-[#E5E9EF] text-xs text-[#8993A0] flex items-center justify-between">
+                <span>No active resumes uploaded in your account.</span>
+                <Link href="/resume" className="text-[#123E63] font-bold hover:underline">
                   Upload Resume &rarr;
                 </Link>
               </div>
@@ -268,22 +322,21 @@ export default function InterviewSetupPage() {
           </div>
         </div>
 
-        {/* Submit */}
         <div className="flex justify-end">
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-medium px-8 py-3 rounded-xl transition shadow-lg shadow-sky-950 disabled:opacity-50"
+            className="flex items-center gap-2 bg-[#F5A623] hover:bg-[#E09212] text-white font-bold px-8 py-3 rounded-xl transition shadow-md disabled:opacity-50 text-xs"
           >
             {isSubmitting ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Generating Interview Room...</span>
+                <span>Generating AI Session...</span>
               </>
             ) : (
               <>
                 <span>Begin Mock Interview</span>
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>

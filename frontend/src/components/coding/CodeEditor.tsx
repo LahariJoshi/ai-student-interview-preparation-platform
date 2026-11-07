@@ -116,7 +116,6 @@ export default function CodeEditor({
     onSubmitCodeRef.current = onSubmitCode;
   }, [onSubmitCode]);
 
-  // Sync controlled language if changed from parent
   useEffect(() => {
     if (
       controlledLanguage &&
@@ -127,7 +126,6 @@ export default function CodeEditor({
     }
   }, [controlledLanguage, selectedLanguage]);
 
-  // Load starter code on mount or when language / question changes
   useEffect(() => {
     const starter = starterCodeMap[selectedLanguage];
     if (starter && starter.trim()) {
@@ -138,13 +136,11 @@ export default function CodeEditor({
     }
   }, [questionId, selectedLanguage, starterCodeMap]);
 
-  // Update line count
   useEffect(() => {
     const lines = (code.match(/\n/g) || []).length + 1;
     setLineCount(Math.max(lines, 1));
   }, [code]);
 
-  // Synchronize scroll between line numbers gutter and textarea
   const handleScroll = () => {
     if (textareaRef.current && lineNumbersRef.current) {
       lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
@@ -158,9 +154,11 @@ export default function CodeEditor({
 
     const currentCode = codeRef.current;
     const currentLang = langRef.current;
-    if (isRunningRef.current || isSubmittingRef.current || !currentCode.trim()) return;
+    if (!currentCode.trim()) return;
 
-    onRunCodeRef.current(currentLang, currentCode);
+    if (onRunCodeRef.current) {
+      onRunCodeRef.current(currentLang, currentCode);
+    }
   };
 
   const triggerSubmit = () => {
@@ -170,103 +168,45 @@ export default function CodeEditor({
 
     const currentCode = codeRef.current;
     const currentLang = langRef.current;
-    if (isRunningRef.current || isSubmittingRef.current || !currentCode.trim()) return;
+    if (!currentCode.trim()) return;
 
-    onSubmitCodeRef.current(currentLang, currentCode);
+    if (onSubmitCodeRef.current) {
+      onSubmitCodeRef.current(currentLang, currentCode);
+    }
   };
 
-  // Keyboard shortcut listener scoped to the code editor
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Support both Windows/Linux (Ctrl) and macOS (Cmd)
-      const isModifier = e.ctrlKey || e.metaKey;
-      const isEnter =
-        e.key === "Enter" ||
-        e.code === "Enter" ||
-        e.code === "NumpadEnter" ||
-        (e as any).keyCode === 13;
-
-      if (!isModifier || !isEnter) return;
-
-      const activeEl = document.activeElement;
-      const isEditorFocused =
-        activeEl === textareaRef.current ||
-        (containerRef.current !== null && containerRef.current.contains(activeEl));
-
-      // Do not trigger from unrelated input fields or textareas
-      if (!isEditorFocused) return;
-
-      // Prevent duplicate execution if already handled
-      if (e.defaultPrevented) return;
-
-      // Check submission shortcut before run shortcut
-      if (e.shiftKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        triggerSubmit();
-      } else {
-        e.preventDefault();
-        e.stopPropagation();
-        triggerRun();
-      }
-    };
-
-    window.addEventListener("keydown", handleGlobalKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleGlobalKeyDown);
-    };
-  }, []);
-
-  // Handle Tab key indentation and keyboard shortcuts within textarea
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const isModifier = e.ctrlKey || e.metaKey;
-    const isEnter =
-      e.key === "Enter" ||
-      e.code === "Enter" ||
-      e.code === "NumpadEnter" ||
-      (e as any).keyCode === 13;
-
-    if (isModifier && isEnter) {
-      // Check submission shortcut before run shortcut
-      if (e.shiftKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        triggerSubmit();
-        return;
-      } else {
-        e.preventDefault();
-        e.stopPropagation();
-        triggerRun();
-        return;
-      }
-    }
-
-    // Tab indentation
     if (e.key === "Tab") {
       e.preventDefault();
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const tabSpaces = "  ";
-
-      const newCode = code.substring(0, start) + tabSpaces + code.substring(end);
+      const target = e.currentTarget;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const spaces = "    ";
+      const newCode = code.substring(0, start) + spaces + code.substring(end);
       setCode(newCode);
+      requestAnimationFrame(() => {
+        target.selectionStart = target.selectionEnd = start + spaces.length;
+      });
+      return;
+    }
 
-      // Restore cursor position after state updates
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + tabSpaces.length;
-      }, 0);
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        if (!isSubmittingRef.current && !isRunningRef.current) {
+          triggerSubmit();
+        }
+      } else {
+        if (!isRunningRef.current && !isSubmittingRef.current) {
+          triggerRun();
+        }
+      }
     }
   };
 
   const handleLanguageChange = (newLang: string) => {
-    const langOption = SUPPORTED_LANGUAGES.find((l) => l.value === newLang);
-    if (!langOption || !langOption.supported) return;
-
-    const isDirty = code !== (starterCodeMap[selectedLanguage] || "");
-    if (isDirty) {
+    if (newLang === selectedLanguage) return;
+    if (code.trim().length > 30) {
       const confirmed = window.confirm(
         "Changing language will reset editor to the new language template. Are you sure you want to proceed?"
       );
@@ -295,26 +235,21 @@ export default function CodeEditor({
   return (
     <div
       ref={containerRef}
-      className="glass-card flex flex-col h-full overflow-hidden border border-slate-800"
+      className="bg-white rounded-2xl shadow-card border border-[#E5E9EF] flex flex-col h-full overflow-hidden"
     >
       {/* Editor Top Toolbar */}
-      <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-3 text-xs">
+      <div className="px-4 py-2.5 bg-[#F8F9FA] border-b border-[#E5E9EF] flex items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Code className="w-4 h-4 text-sky-400" />
+            <Code className="w-4 h-4 text-[#123E63]" />
             <select
               value={selectedLanguage}
               onChange={(e) => handleLanguageChange(e.target.value)}
               disabled={isRunning || isSubmitting}
-              className="bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1 text-xs text-white focus:outline-none focus:border-sky-500 font-medium"
+              className="bg-white border border-[#E5E9EF] rounded-lg px-2.5 py-1 text-xs text-[#202B38] font-semibold focus:outline-none focus:border-[#123E63]"
             >
               {SUPPORTED_LANGUAGES.map((lang) => (
-                <option
-                  key={lang.value}
-                  value={lang.value}
-                  disabled={!lang.supported}
-                  className={!lang.supported ? "text-slate-500 bg-slate-900" : "text-white bg-slate-950"}
-                >
+                <option key={lang.value} value={lang.value} disabled={!lang.supported}>
                   {lang.label}
                 </option>
               ))}
@@ -325,7 +260,7 @@ export default function CodeEditor({
             onClick={handleResetCode}
             disabled={isRunning || isSubmitting}
             title="Reset to starter code"
-            className="inline-flex items-center gap-1 text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition"
+            className="inline-flex items-center gap-1 text-[#8993A0] hover:text-[#202B38] px-2 py-1 rounded transition text-xs font-semibold"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset</span>
@@ -333,15 +268,15 @@ export default function CodeEditor({
         </div>
 
         {/* Shortcuts Indicator */}
-        <div className="hidden md:flex items-center gap-3 text-[11px] text-slate-400">
+        <div className="hidden sm:flex items-center gap-3 text-[11px] text-[#8993A0]">
           <span className="inline-flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">
+            <kbd className="px-1.5 py-0.5 rounded bg-white border border-[#E5E9EF] font-mono text-[10px]">
               Ctrl+Enter
             </kbd>
             <span>Run</span>
           </span>
           <span className="inline-flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">
+            <kbd className="px-1.5 py-0.5 rounded bg-white border border-[#E5E9EF] font-mono text-[10px]">
               Ctrl+Shift+Enter
             </kbd>
             <span>Submit</span>
@@ -349,16 +284,16 @@ export default function CodeEditor({
         </div>
       </div>
 
-      {/* Editor Workspace with Line Numbers */}
+      {/* Code Editor Surface */}
       <div
         onClick={() => textareaRef.current?.focus()}
-        className="relative flex-1 min-h-[360px] bg-slate-950 flex overflow-hidden font-mono text-xs cursor-text"
+        className="relative flex-1 min-h-[380px] bg-[#0A1A2A] flex overflow-hidden font-mono text-xs cursor-text"
       >
         {/* Line Numbers Gutter */}
         <div
           ref={lineNumbersRef}
           aria-hidden="true"
-          className="w-12 bg-slate-900/60 border-r border-slate-800 py-3 text-right pr-3 select-none text-slate-600 font-mono text-xs overflow-hidden leading-6"
+          className="w-12 bg-[#06121D] border-r border-[#122B42] py-3 text-right pr-3 select-none text-[#4A6882] font-mono text-xs overflow-hidden leading-6"
         >
           {Array.from({ length: lineCount }).map((_, idx) => (
             <div key={idx + 1} className="h-6">
@@ -379,34 +314,32 @@ export default function CodeEditor({
           autoComplete="off"
           autoCorrect="off"
           placeholder="// Write your solution here..."
-          className="flex-1 bg-transparent text-slate-100 p-3 outline-none resize-none font-mono text-xs leading-6 selection:bg-sky-500/30 overflow-y-auto whitespace-pre tab-4"
+          className="flex-1 bg-transparent text-[#E1EAF5] p-3 outline-none resize-none font-mono text-xs leading-6 selection:bg-[#123E63]/80 overflow-y-auto whitespace-pre tab-4"
         />
       </div>
 
-      {/* Editor Bottom Status & Action Bar */}
-      <div className="px-4 py-3 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between gap-3">
-        <div className="text-[11px] text-slate-400 flex items-center gap-2">
+      {/* Editor Bottom Bar */}
+      <div className="px-4 py-3 bg-[#F8F9FA] border-t border-[#E5E9EF] flex items-center justify-between gap-3">
+        <div className="text-[11px] text-[#8993A0] flex items-center gap-2 font-medium">
           <span>{lineCount} lines</span>
-          <span>•</span>
+          <span>&bull;</span>
           <span>{code.length} characters</span>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Run Button */}
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => triggerRun()}
             disabled={isRunning || isSubmitting || !code.trim()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 text-[#123E63] border border-[#E5E9EF] rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50"
           >
-            <Play className={`w-3.5 h-3.5 text-sky-400 ${isRunning ? "animate-spin" : ""}`} />
+            <Play className={`w-3.5 h-3.5 text-[#123E63] ${isRunning ? "animate-spin" : ""}`} />
             <span>{isRunning ? "Running..." : "Run Code"}</span>
           </button>
 
-          {/* Submit Button */}
           <button
             onClick={() => triggerSubmit()}
             disabled={isRunning || isSubmitting || !code.trim()}
-            className="inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition shadow-sm disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-5 py-2 bg-[#F5A623] hover:bg-[#E09212] text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
           >
             <Send className={`w-3.5 h-3.5 ${isSubmitting ? "animate-bounce" : ""}`} />
             <span>{isSubmitting ? "Evaluating..." : "Submit Solution"}</span>

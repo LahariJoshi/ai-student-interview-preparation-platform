@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   CodeRunResponse,
   CodingSubmissionDetail,
-  SubmissionResultSummary,
   TestCaseRunResult,
 } from "@/types/coding";
 import {
@@ -16,9 +15,6 @@ import {
   Zap,
   Cpu,
   Layers,
-  ChevronDown,
-  ChevronUp,
-  FileText,
   Lock,
   ExternalLink,
 } from "lucide-react";
@@ -40,26 +36,24 @@ export default function SubmissionResult({
 
   if (isEvaluating) {
     return (
-      <div className="glass-card p-6 border border-slate-800 text-center space-y-3">
-        <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto" />
-        <h4 className="text-sm font-semibold text-white">Running Sandbox Evaluation...</h4>
-        <p className="text-xs text-slate-400">
-          Executing your solution against test cases in an isolated sandbox.
+      <div className="bg-white rounded-2xl p-6 shadow-card border border-[#E5E9EF] text-center space-y-3">
+        <div className="w-8 h-8 border-2 border-[#123E63] border-t-transparent rounded-full animate-spin mx-auto" />
+        <h4 className="text-sm font-bold text-[#202B38]">Running Code Execution...</h4>
+        <p className="text-xs text-[#8993A0]">
+          Executing your solution against test cases in the sandbox environment.
         </p>
       </div>
     );
   }
 
-  // Handle empty state
   if (!runResult && !submission) {
     return (
-      <div className="glass-card p-6 border border-slate-800 text-center text-xs text-slate-500">
-        Run your code to test against sample cases, or submit when you are ready for grading.
+      <div className="bg-white rounded-2xl p-6 shadow-card border border-[#E5E9EF] text-center text-xs text-[#8993A0]">
+        Run your code to test against sample test cases, or submit when you are ready for evaluation.
       </div>
     );
   }
 
-  // Extract normalized fields whether from runResult or submission
   const isSubmission = !!submission;
   const verdict = submission
     ? submission.result?.verdict || (submission.status === "failed" ? "Failed" : "Evaluating")
@@ -91,31 +85,31 @@ export default function SubmissionResult({
   const getVerdictBadge = () => {
     if (isAccepted) {
       return (
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-sm">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-          <span>{isSubmission ? "Accepted" : "Execution Successful"}</span>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>{isSubmission ? "Accepted" : "Sample Tests Passed"}</span>
         </div>
       );
     }
     if (isTimeLimit) {
       return (
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-sm">
-          <Clock className="w-5 h-5 text-amber-400" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF6E8] text-[#F5A623] border border-[#F5A623]/30 font-bold text-xs">
+          <Clock className="w-4 h-4 text-[#F5A623]" />
           <span>Time Limit Exceeded</span>
         </div>
       );
     }
     if (isError) {
       return (
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-sm">
-          <AlertTriangle className="w-5 h-5 text-rose-400" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-red-600 border border-red-200 font-bold text-xs">
+          <AlertTriangle className="w-4 h-4 text-red-500" />
           <span>{verdict || "Runtime Error"}</span>
         </div>
       );
     }
     return (
-      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-sm">
-        <XCircle className="w-5 h-5 text-rose-400" />
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-red-600 border border-red-200 font-bold text-xs">
+        <XCircle className="w-4 h-4 text-red-500" />
         <span>{verdict || "Wrong Answer"}</span>
       </div>
     );
@@ -124,23 +118,22 @@ export default function SubmissionResult({
   const activeTestCase = testCases[selectedCaseIdx];
 
   return (
-    <div className="glass-card border border-slate-800 rounded-xl overflow-hidden space-y-4 p-5">
+    <div className="bg-white rounded-2xl shadow-card border border-[#E5E9EF] overflow-hidden space-y-4 p-5 sm:p-6">
       {/* Top Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-[#E5E9EF]">
         <div className="flex items-center gap-3">
           {getVerdictBadge()}
-          <span className="text-xs text-slate-400">
-            {isSubmission ? "Full Submission Result" : "Sample Run Result"}
+          <span className="text-xs text-[#8993A0]">
+            {isSubmission ? "Full Submission Assessment" : "Interactive Sample Run"}
           </span>
         </div>
 
-        {/* Action Link for full submission */}
         {isSubmission && submission && (
           <Link
             href={`/coding/results?submissionId=${submission.id}`}
-            className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-medium"
+            className="inline-flex items-center gap-1 text-xs text-[#123E63] hover:underline font-bold"
           >
-            <span>View Full Diagnostic</span>
+            <span>View Diagnostics</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </Link>
         )}
@@ -148,48 +141,44 @@ export default function SubmissionResult({
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* Score */}
         {score !== null && (
-          <div className="bg-slate-900/80 border border-slate-800 rounded-lg p-3">
-            <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Score</div>
-            <div className="text-xl font-bold text-white mt-1">
-              <span className={score === 100 ? "text-emerald-400" : score > 0 ? "text-sky-400" : "text-slate-400"}>
+          <div className="bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl p-3">
+            <span className="text-[10px] font-bold text-[#8993A0] uppercase tracking-wider block">Score</span>
+            <div className="text-lg font-bold text-[#202B38] mt-0.5">
+              <span className={score === 100 ? "text-emerald-600" : score > 0 ? "text-[#123E63]" : "text-[#202B38]"}>
                 {score.toFixed(1)}
               </span>
-              <span className="text-xs text-slate-500 font-normal"> / 100</span>
+              <span className="text-xs text-[#8993A0] font-normal"> / 100</span>
             </div>
           </div>
         )}
 
-        {/* Tests Passed */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-lg p-3">
-          <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Test Cases</div>
-          <div className="text-xl font-bold text-white mt-1">
-            <span className={passedCases === totalCases && totalCases > 0 ? "text-emerald-400" : "text-amber-400"}>
+        <div className="bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl p-3">
+          <span className="text-[10px] font-bold text-[#8993A0] uppercase tracking-wider block">Test Cases</span>
+          <div className="text-lg font-bold text-[#202B38] mt-0.5">
+            <span className={passedCases === totalCases && totalCases > 0 ? "text-emerald-600" : "text-[#F5A623]"}>
               {passedCases}
             </span>
-            <span className="text-xs text-slate-500 font-normal"> / {totalCases} Passed</span>
+            <span className="text-xs text-[#8993A0] font-normal"> / {totalCases} Passed</span>
           </div>
         </div>
 
-        {/* Runtime */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-lg p-3">
-          <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Zap className="w-3 h-3 text-sky-400" />
+        <div className="bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl p-3">
+          <span className="text-[10px] font-bold text-[#8993A0] uppercase tracking-wider flex items-center gap-1">
+            <Zap className="w-3 h-3 text-[#123E63]" />
             Runtime
-          </div>
-          <div className="text-xl font-bold text-white mt-1">
+          </span>
+          <div className="text-lg font-bold text-[#202B38] mt-0.5">
             {executionTime !== undefined && executionTime !== null ? `${Math.round(executionTime)} ms` : "—"}
           </div>
         </div>
 
-        {/* Memory */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-lg p-3">
-          <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Cpu className="w-3 h-3 text-indigo-400" />
+        <div className="bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl p-3">
+          <span className="text-[10px] font-bold text-[#8993A0] uppercase tracking-wider flex items-center gap-1">
+            <Cpu className="w-3 h-3 text-[#F5A623]" />
             Memory
-          </div>
-          <div className="text-xl font-bold text-white mt-1">
+          </span>
+          <div className="text-lg font-bold text-[#202B38] mt-0.5">
             {memoryKb ? `${Math.round(memoryKb)} KB` : "—"}
           </div>
         </div>
@@ -197,12 +186,12 @@ export default function SubmissionResult({
 
       {/* Error Callout */}
       {errorMessage && (
-        <div className="p-3.5 bg-rose-950/40 border border-rose-900/60 rounded-lg space-y-1">
-          <div className="text-xs font-semibold text-rose-300 flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            Runtime / Compilation Message
+        <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl space-y-1">
+          <div className="text-xs font-bold text-red-700 flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+            Execution Error Message
           </div>
-          <pre className="text-xs font-mono text-rose-200 overflow-x-auto whitespace-pre-wrap">
+          <pre className="text-xs font-mono text-red-600 overflow-x-auto whitespace-pre-wrap">
             {errorMessage}
           </pre>
         </div>
@@ -210,12 +199,11 @@ export default function SubmissionResult({
 
       {/* Test Cases Tab List */}
       {testCases.length > 0 && (
-        <div className="space-y-3 pt-2">
-          <div className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-            Test Case Details
+        <div className="space-y-3 pt-1">
+          <div className="text-xs font-bold text-[#8993A0] uppercase tracking-wider">
+            Test Case Results
           </div>
 
-          {/* Test Case Selection Tabs */}
           <div className="flex flex-wrap gap-2">
             {testCases.map((tc, idx) => {
               const isPassed = tc.passed;
@@ -224,79 +212,74 @@ export default function SubmissionResult({
                 <button
                   key={tc.test_case_id || idx}
                   onClick={() => setSelectedCaseIdx(idx)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition border ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition border ${
                     isSelected
-                      ? "bg-slate-800 text-white border-sky-500 shadow-sm"
-                      : "bg-slate-900/80 text-slate-400 border-slate-800 hover:text-slate-200"
+                      ? "bg-[#123E63] text-white border-[#123E63] shadow-xs"
+                      : "bg-[#F8F9FA] text-[#8993A0] border-[#E5E9EF] hover:text-[#202B38]"
                   }`}
                 >
                   {isPassed ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${isSelected ? "text-emerald-300" : "text-emerald-600"}`} />
                   ) : (
-                    <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                    <XCircle className={`w-3.5 h-3.5 ${isSelected ? "text-red-300" : "text-red-500"}`} />
                   )}
                   <span>Case {idx + 1}</span>
                   {!tc.is_sample && (
-                    <span title="Hidden Test Case">
-                      <Lock className="w-2.5 h-2.5 text-slate-500" />
-                    </span>
+                    <Lock className="w-2.5 h-2.5 opacity-60" />
                   )}
                 </button>
               );
             })}
           </div>
 
-          {/* Active Test Case Diagnostics */}
           {activeTestCase && (
-            <div className="p-4 bg-slate-950 border border-slate-800 rounded-lg space-y-3 text-xs font-mono">
-              <div className="flex items-center justify-between text-slate-400 pb-2 border-b border-slate-900">
-                <span className="font-semibold text-white">
-                  Case #{selectedCaseIdx + 1} {activeTestCase.is_sample ? "(Sample)" : "(Hidden Test Case)"}
+            <div className="p-4 bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl space-y-3 text-xs font-mono">
+              <div className="flex items-center justify-between text-[#8993A0] pb-2 border-b border-[#E5E9EF]">
+                <span className="font-bold text-[#202B38] font-sans">
+                  Case #{selectedCaseIdx + 1} {activeTestCase.is_sample ? "(Sample Case)" : "(Hidden Test Case)"}
                 </span>
-                <span className={activeTestCase.passed ? "text-emerald-400" : "text-rose-400"}>
+                <span className={activeTestCase.passed ? "text-emerald-700 font-bold" : "text-red-600 font-bold"}>
                   {activeTestCase.verdict || (activeTestCase.passed ? "Passed" : "Failed")}
                 </span>
               </div>
 
-              {/* Sample Test Case I/O */}
               {activeTestCase.is_sample ? (
                 <div className="space-y-2">
                   <div>
-                    <span className="text-slate-500 block mb-1">Input:</span>
-                    <pre className="p-2 bg-slate-900 rounded text-slate-200 overflow-x-auto whitespace-pre-wrap">
+                    <span className="text-[#8993A0] block mb-1 font-sans text-[11px]">Input:</span>
+                    <pre className="p-2 bg-white rounded-lg border border-[#E5E9EF] text-[#202B38] overflow-x-auto whitespace-pre-wrap">
                       {activeTestCase.input_data || "—"}
                     </pre>
                   </div>
 
                   <div>
-                    <span className="text-slate-500 block mb-1">Expected Output:</span>
-                    <pre className="p-2 bg-slate-900 rounded text-emerald-400 overflow-x-auto whitespace-pre-wrap">
+                    <span className="text-[#8993A0] block mb-1 font-sans text-[11px]">Expected:</span>
+                    <pre className="p-2 bg-white rounded-lg border border-emerald-200 text-emerald-700 overflow-x-auto whitespace-pre-wrap font-bold">
                       {activeTestCase.expected_output || "—"}
                     </pre>
                   </div>
 
                   <div>
-                    <span className="text-slate-500 block mb-1">Your Output:</span>
-                    <pre className={`p-2 bg-slate-900 rounded overflow-x-auto whitespace-pre-wrap ${
-                      activeTestCase.passed ? "text-emerald-400" : "text-rose-400"
+                    <span className="text-[#8993A0] block mb-1 font-sans text-[11px]">Your Output:</span>
+                    <pre className={`p-2 bg-white rounded-lg border overflow-x-auto whitespace-pre-wrap ${
+                      activeTestCase.passed ? "border-emerald-200 text-emerald-700" : "border-red-200 text-red-600"
                     }`}>
                       {activeTestCase.actual_output || (activeTestCase.error_message ? `Error: ${activeTestCase.error_message}` : "—")}
                     </pre>
                   </div>
                 </div>
               ) : (
-                /* Hidden Test Case Protected view */
-                <div className="p-4 rounded bg-slate-900/60 border border-slate-800/80 space-y-2 text-center text-slate-400">
-                  <div className="flex items-center justify-center gap-2 text-amber-400 font-sans font-medium text-xs">
+                <div className="p-4 rounded-xl bg-white border border-[#E5E9EF] space-y-2 text-center text-[#8993A0]">
+                  <div className="flex items-center justify-center gap-1.5 text-[#F5A623] font-sans font-bold text-xs">
                     <Lock className="w-4 h-4" />
                     <span>Protected Assessment Test Case</span>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-sans max-w-sm mx-auto">
-                    Input and expected output for hidden evaluation test cases are sealed to maintain assessment integrity.
+                  <p className="text-[11px] font-sans max-w-sm mx-auto">
+                    Hidden assessment test cases verify edge conditions and algorithmic scalability.
                   </p>
-                  <div className="pt-2 text-xs">
-                    Status:{" "}
-                    <strong className={activeTestCase.passed ? "text-emerald-400" : "text-rose-400"}>
+                  <div className="pt-1 text-xs">
+                    Result:{" "}
+                    <strong className={activeTestCase.passed ? "text-emerald-700" : "text-red-600"}>
                       {activeTestCase.passed ? "Passed ✓" : "Failed ✗"}
                     </strong>
                   </div>

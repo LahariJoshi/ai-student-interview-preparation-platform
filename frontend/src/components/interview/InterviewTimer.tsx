@@ -35,16 +35,16 @@ export default function InterviewTimer({
 
   return (
     <div
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-mono font-medium ${
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono font-semibold transition ${
         isLowTime
-          ? "bg-rose-950/60 border-rose-800 text-rose-300 animate-pulse"
-          : "bg-slate-900 border-slate-800 text-slate-300"
+          ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse"
+          : "bg-[#F1F3F6] border-[#E5E9EF] text-[#123E63]"
       }`}
     >
       {isLowTime ? (
-        <AlertTriangle className="w-4 h-4 text-rose-400" />
+        <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
       ) : (
-        <Clock className="w-4 h-4 text-sky-400" />
+        <Clock className="w-3.5 h-3.5 text-[#F5A623]" />
       )}
       <span>
         {mins}:{secs < 10 ? "0" : ""}{secs}

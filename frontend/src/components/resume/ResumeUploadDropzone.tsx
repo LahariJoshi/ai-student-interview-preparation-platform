@@ -1,8 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { apiFetch } from "@/lib/api";
-import { UploadCloud, FileText, Trash2, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { apiFetch, getApiBaseUrl } from "@/lib/api";
+import {
+  UploadCloud,
+  FileText,
+  Trash2,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Sparkles,
+  Search,
+  ExternalLink,
+} from "lucide-react";
 import ResumeAnalysis from "./ResumeAnalysis";
 
 export interface ResumeItem {
@@ -12,7 +22,6 @@ export interface ResumeItem {
   file_size: number;
   mime_type: string;
   created_at: string;
-
   extraction_status?: string;
   character_count?: number | null;
   word_count?: number | null;
@@ -30,31 +39,47 @@ export default function ResumeUploadDropzone() {
   const [success, setSuccess] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
 
   useEffect(() => {
     fetchResumes();
+
+    const handleResumesUpdated = () => {
+      fetchResumes();
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "last_resume_update") {
+        fetchResumes();
+      }
+    };
+
+    window.addEventListener("resumes_updated", handleResumesUpdated);
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("focus", handleResumesUpdated);
+
+    return () => {
+      window.removeEventListener("resumes_updated", handleResumesUpdated);
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("focus", handleResumesUpdated);
+    };
   }, []);
 
   const fetchResumes = async () => {
     setIsLoadingList(true);
-
     try {
       const data = await apiFetch<{
         resumes: ResumeItem[];
         total_count: number;
-      }>("/resume/my-resumes");
+      }>(`/resume/my-resumes?t=${Date.now()}`);
 
-      setResumes(data.resumes);
+      setResumes(data.resumes || []);
 
-      // Check which resumes already have an analysis
       const analysisChecks = await Promise.all(
-        data.resumes.map(async (resume) => {
+        (data.resumes || []).map(async (resume) => {
           try {
             await apiFetch(`/resume/${resume.id}/analysis`);
             return resume.id;
           } catch {
-            // 404 means this resume has not been analyzed yet
             return null;
           }
         })
@@ -76,7 +101,6 @@ export default function ResumeUploadDropzone() {
     setError(null);
     setSuccess(null);
 
-    // Client-side pre-validations
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (ext !== "pdf" && ext !== "docx") {
       setError("Invalid file type. Only PDF (.pdf) and DOCX (.docx) files are supported.");
@@ -98,10 +122,10 @@ export default function ResumeUploadDropzone() {
     formData.append("file", file);
 
     try {
-      const response = await fetch("http://localhost:8000/api/v1/resume/upload", {
+      const response = await fetch(`${getApiBaseUrl()}/resume/upload`, {
         method: "POST",
         body: formData,
-        credentials: "include", // Essential for HttpOnly access_token cookie
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -112,6 +136,10 @@ export default function ResumeUploadDropzone() {
       const uploadedResume: ResumeItem = await response.json();
       setResumes((prev) => [uploadedResume, ...prev]);
       setSuccess(`Resume '${uploadedResume.original_filename}' uploaded successfully!`);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("resumes_updated", { detail: { action: "upload", resume: uploadedResume } }));
+        localStorage.setItem("last_resume_update", Date.now().toString());
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred during resume upload.");
     } finally {
@@ -122,18 +150,15 @@ export default function ResumeUploadDropzone() {
     }
   };
 
-    const handleExtractText = async (resumeId: string) => {
+  const handleExtractText = async (resumeId: string) => {
     setError(null);
     setSuccess(null);
     setExtractingId(resumeId);
 
     try {
-      const extracted = await apiFetch<ResumeItem>(
-        `/resume/${resumeId}/extract-text`,
-        {
-          method: "POST",
-        }
-      );
+      const extracted = await apiFetch<ResumeItem>(`/resume/${resumeId}/extract-text`, {
+        method: "POST",
+      });
 
       setResumes((prev) =>
         prev.map((resume) =>
@@ -172,6 +197,7 @@ export default function ResumeUploadDropzone() {
         return updated;
       });
 
+      setSelectedAnalysisId(resumeId);
       setSuccess("Resume analysis completed successfully.");
     } catch (err: any) {
       setError(err.message || "Failed to analyze resume.");
@@ -180,14 +206,19 @@ export default function ResumeUploadDropzone() {
     }
   };
 
-  
-
   const handleDelete = async (resumeId: string) => {
     setError(null);
     setSuccess(null);
     try {
       await apiFetch(`/resume/${resumeId}`, { method: "DELETE" });
       setResumes((prev) => prev.filter((r) => r.id !== resumeId));
+      if (selectedAnalysisId === resumeId) {
+        setSelectedAnalysisId(null);
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("resumes_updated", { detail: { action: "delete", resumeId } }));
+        localStorage.setItem("last_resume_update", Date.now().toString());
+      }
       setSuccess("Resume deleted successfully.");
     } catch (err: any) {
       setError(err.message || "Failed to delete resume.");
@@ -220,24 +251,24 @@ export default function ResumeUploadDropzone() {
   };
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto">
+    <div className="space-y-6">
       {/* Upload Box */}
-      <div className="glass-card p-6 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <UploadCloud className="w-5 h-5 text-sky-400" />
-          Upload Student Resume
-        </h2>
+      <div className="bg-white rounded-2xl p-6 shadow-card border border-[#E5E9EF] space-y-4">
+        <h3 className="text-base font-bold text-[#202B38] flex items-center gap-2">
+          <UploadCloud className="w-5 h-5 text-[#123E63]" />
+          <span>Upload Student Resume File</span>
+        </h3>
 
         {error && (
-          <div className="bg-red-950/80 border border-red-800 text-red-300 p-3 rounded-lg flex items-start gap-2 text-sm">
-            <AlertCircle className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
+          <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-xl flex items-start gap-2 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="bg-emerald-950/80 border border-emerald-800 text-emerald-300 p-3 rounded-lg flex items-start gap-2 text-sm">
-            <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400 mt-0.5" />
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-3.5 rounded-xl flex items-start gap-2 text-xs">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
             <span>{success}</span>
           </div>
         )}
@@ -248,10 +279,10 @@ export default function ResumeUploadDropzone() {
           onDragLeave={handleDrag}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
+          className={`border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition ${
             dragActive
-              ? "border-sky-400 bg-sky-950/40"
-              : "border-slate-700 bg-slate-900/50 hover:border-slate-500"
+              ? "border-[#F5A623] bg-[#FFF6E8]"
+              : "border-[#BCD3E6] bg-[#F8F9FA] hover:border-[#123E63] hover:bg-[#F0F5FA]"
           }`}
         >
           <input
@@ -264,20 +295,20 @@ export default function ResumeUploadDropzone() {
 
           {isUploading ? (
             <div className="flex flex-col items-center justify-center space-y-2 py-4">
-              <Loader2 className="w-8 h-8 text-sky-400 animate-spin" />
-              <p className="text-slate-300 text-sm font-medium">Uploading & Validating Resume...</p>
+              <Loader2 className="w-8 h-8 text-[#123E63] animate-spin" />
+              <p className="text-[#202B38] text-xs font-bold">Uploading & Validating Document...</p>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center space-y-2">
-              <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-sky-400">
+              <div className="w-12 h-12 rounded-full bg-[#123E63]/10 flex items-center justify-center text-[#123E63]">
                 <UploadCloud className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-white font-medium text-sm">
-                  Click to upload or drag & drop file here
+                <p className="text-[#202B38] font-bold text-sm">
+                  Click to select or drag and drop your resume file
                 </p>
-                <p className="text-slate-400 text-xs mt-1">
-                  Supported Formats: PDF (.pdf) or DOCX (.docx) • Max size: 5 MB
+                <p className="text-[#8993A0] text-xs mt-1">
+                  Supported formats: PDF (.pdf) or Word (.docx) &bull; Maximum file size: 5 MB
                 </p>
               </div>
             </div>
@@ -286,111 +317,117 @@ export default function ResumeUploadDropzone() {
       </div>
 
       {/* Uploaded Resumes List */}
-      <div className="glass-card p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-sky-400" />
-            Uploaded Resumes ({resumes.length} / 5)
+      <div className="bg-white rounded-2xl p-6 shadow-card border border-[#E5E9EF] space-y-4">
+        <div className="flex items-center justify-between border-b border-[#E5E9EF] pb-3">
+          <h3 className="text-base font-bold text-[#202B38] flex items-center gap-2">
+            <FileText className="w-4 h-4 text-[#123E63]" />
+            <span>Saved Resumes ({resumes.length} / 5)</span>
           </h3>
+          <span className="text-xs text-[#8993A0]">Up to 5 stored drafts</span>
         </div>
 
         {isLoadingList ? (
-          <div className="py-6 text-center text-slate-400 text-sm">Loading uploaded resumes...</div>
+          <div className="py-6 text-center text-[#8993A0] text-xs">Loading stored resumes...</div>
         ) : resumes.length === 0 ? (
-          <div className="py-6 text-center text-slate-400 text-sm">
-            No resumes uploaded yet. Upload a PDF or DOCX file to get started.
+          <div className="py-8 text-center text-[#8993A0] text-xs space-y-2">
+            <FileText className="w-8 h-8 text-[#BCD3E6] mx-auto" />
+            <p className="font-semibold text-[#202B38]">No resumes stored yet</p>
+            <p>Upload your resume above to extract text and generate ATS evaluations.</p>
           </div>
         ) : (
           <div className="space-y-3">
             {resumes.map((resume) => (
               <div
                 key={resume.id}
-                className="flex items-center justify-between bg-slate-900 border border-slate-800 p-4 rounded-xl hover:border-slate-700 transition"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-[#E5E9EF] bg-[#F8F9FA] hover:bg-white hover:border-[#BCD3E6] transition gap-3"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-sky-950/80 border border-sky-800 flex items-center justify-center text-sky-400 shrink-0">
-                    <FileText className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-[#123E63] text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <FileText className="w-5 h-5 text-[#F5A623]" />
                   </div>
                   <div>
-                    <p className="text-white text-sm font-medium">{resume.original_filename}</p>
-                    <p className="text-slate-400 text-xs">
-                      {formatBytes(resume.file_size)} • Uploaded on{" "}
+                    <p className="text-[#202B38] text-xs font-bold truncate max-w-[280px]">
+                      {resume.original_filename}
+                    </p>
+                    <p className="text-[#8993A0] text-[11px] mt-0.5">
+                      {formatBytes(resume.file_size)} &bull; Uploaded{" "}
                       {new Date(resume.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    {resume.extraction_status === "completed" ? (
-                      <span className="text-xs text-emerald-400 font-medium">
-                        ✓ Text Extracted
-                      </span>
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  {resume.extraction_status === "completed" ? (
+                    <span className="text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                      ✓ Text Ready
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleExtractText(resume.id)}
+                      disabled={extractingId === resume.id}
+                      className="px-3 py-1.5 rounded-lg bg-[#123E63] hover:bg-[#0D3557] disabled:opacity-50 text-white text-xs font-bold transition flex items-center gap-1"
+                    >
+                      {extractingId === resume.id && (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      )}
+                      <span>Extract</span>
+                    </button>
+                  )}
+
+                  {resume.extraction_status === "completed" && (
+                    analyzedIds.has(resume.id) ? (
+                      <button
+                        onClick={() => setSelectedAnalysisId(resume.id)}
+                        className="px-3 py-1.5 rounded-lg bg-[#FFF6E8] hover:bg-[#FFECC7] text-[#F5A623] border border-[#F5A623]/30 text-xs font-bold transition flex items-center gap-1"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>View Analysis</span>
+                      </button>
                     ) : (
                       <button
-                        onClick={() => handleExtractText(resume.id)}
-                        disabled={extractingId === resume.id}
-                        className="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition"
+                        onClick={() => handleAnalyzeResume(resume.id)}
+                        disabled={analyzingId === resume.id}
+                        className="px-3 py-1.5 rounded-lg bg-[#F5A623] hover:bg-[#E09212] disabled:opacity-50 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs"
                       >
-                        {extractingId === resume.id ? (
-                          <span className="flex items-center gap-1">
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Extracting...
-                          </span>
-                        ) : (
-                          "Extract Text"
+                        {analyzingId === resume.id && (
+                          <Loader2 className="w-3 h-3 animate-spin" />
                         )}
+                        <span>Analyze</span>
                       </button>
-                    )}
+                    )
+                  )}
 
-                    {resume.extraction_status === "completed" && (
-                      analyzedIds.has(resume.id) ? (
-                        <button
-                          onClick={() => setSelectedAnalysisId(resume.id)}
-                          className="text-xs text-emerald-400 font-medium hover:text-emerald-300 transition"
-                        >
-                          ✓ View Analysis
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleAnalyzeResume(resume.id)}
-                          disabled={analyzingId === resume.id}
-                          className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition"
-                        >
-                          {analyzingId === resume.id ? (
-                            <span className="flex items-center gap-1">
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              Analyzing...
-                            </span>
-                          ) : (
-                            "Analyze Resume"
-                          )}
-                        </button>
-                      )
-                    )}
-
-                    <button
-                      onClick={() => handleDelete(resume.id)}
-                      className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition"
-                      title="Delete Resume"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleDelete(resume.id)}
+                    className="p-1.5 rounded-lg text-[#8993A0] hover:text-red-600 hover:bg-red-50 transition"
+                    title="Delete resume"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
-            {selectedAnalysisId && (
-        <div className="glass-card p-6">
-          <ResumeAnalysis resumeId={selectedAnalysisId} />
 
-          <button
-            onClick={() => setSelectedAnalysisId(null)}
-            className="mt-4 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm transition"
-          >
-            Close Analysis
-          </button>
+      {/* Analysis Section Details */}
+      {selectedAnalysisId && (
+        <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-card border border-[#E5E9EF] space-y-4">
+          <div className="flex items-center justify-between border-b border-[#E5E9EF] pb-3">
+            <h3 className="text-base font-bold text-[#202B38] flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#F5A623]" />
+              <span>Full Resume Structural Analysis</span>
+            </h3>
+            <button
+              onClick={() => setSelectedAnalysisId(null)}
+              className="text-xs font-semibold text-[#8993A0] hover:text-[#202B38]"
+            >
+              ✕ Close
+            </button>
+          </div>
+
+          <ResumeAnalysis resumeId={selectedAnalysisId} />
         </div>
       )}
     </div>

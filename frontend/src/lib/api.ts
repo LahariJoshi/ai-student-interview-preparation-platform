@@ -12,9 +12,12 @@ export function getApiBaseUrl(): string {
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const defaultHeaders: Record<string, string> = {
     "Content-Type": "application/json",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
   };
 
   const config: RequestInit = {
+    cache: "no-store",
     ...options,
     headers: {
       ...defaultHeaders,

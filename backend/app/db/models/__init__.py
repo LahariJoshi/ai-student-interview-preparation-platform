@@ -15,6 +15,7 @@ from app.db.models.interview import (
     InterviewQuestion,
     InterviewAnswer,
 )
+from app.db.models.password_reset import PasswordResetToken
 
 __all__ = [
     "User",
@@ -30,4 +31,5 @@ __all__ = [
     "InterviewSession",
     "InterviewQuestion",
     "InterviewAnswer",
+    "PasswordResetToken",
 ]

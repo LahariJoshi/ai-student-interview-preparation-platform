@@ -40,25 +40,25 @@ export default function QuestionDetails({ question }: QuestionDetailsProps) {
     switch (difficulty) {
       case "Easy":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
             Easy
           </span>
         );
       case "Medium":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#FFF6E8] text-[#F5A623] border border-[#F5A623]/30">
             Medium
           </span>
         );
       case "Hard":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-600 border border-red-200">
             Hard
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-700 text-slate-300">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600">
             {difficulty}
           </span>
         );
@@ -66,39 +66,39 @@ export default function QuestionDetails({ question }: QuestionDetailsProps) {
   };
 
   return (
-    <div className="glass-card flex flex-col h-full overflow-hidden">
-      {/* Question Header */}
-      <div className="p-6 border-b border-slate-800 space-y-3">
+    <div className="bg-white rounded-2xl shadow-card border border-[#E5E9EF] flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="p-5 border-b border-[#E5E9EF] space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {getDifficultyBadge(question.difficulty)}
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
-              <Layers className="w-3 h-3 text-sky-400" />
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#F1F3F6] text-[#123E63] border border-[#E5E9EF]">
+              <Layers className="w-3 h-3 text-[#F5A623]" />
               {question.topic}
             </span>
           </div>
 
           {question.is_solved && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Solved
+              <span>Solved</span>
             </div>
           )}
         </div>
 
-        <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
+        <h1 className="text-xl font-bold text-[#202B38] tracking-tight">
           {question.title}
         </h1>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 px-6 border-b border-slate-800 bg-slate-900/40 text-xs font-medium">
+      <div className="flex items-center gap-1 px-5 border-b border-[#E5E9EF] bg-[#F8F9FA] text-xs font-bold">
         <button
           onClick={() => setActiveTab("description")}
-          className={`py-3 px-3 border-b-2 transition ${
+          className={`py-2.5 px-3 border-b-2 transition ${
             activeTab === "description"
-              ? "border-sky-500 text-sky-400 font-semibold"
-              : "border-transparent text-slate-400 hover:text-slate-200"
+              ? "border-[#123E63] text-[#123E63]"
+              : "border-transparent text-[#8993A0] hover:text-[#202B38]"
           }`}
         >
           Description
@@ -106,22 +106,22 @@ export default function QuestionDetails({ question }: QuestionDetailsProps) {
 
         <button
           onClick={() => setActiveTab("samples")}
-          className={`py-3 px-3 border-b-2 transition ${
+          className={`py-2.5 px-3 border-b-2 transition ${
             activeTab === "samples"
-              ? "border-sky-500 text-sky-400 font-semibold"
-              : "border-transparent text-slate-400 hover:text-slate-200"
+              ? "border-[#123E63] text-[#123E63]"
+              : "border-transparent text-[#8993A0] hover:text-[#202B38]"
           }`}
         >
-          Sample Test Cases ({question.sample_test_cases.length})
+          Sample Cases ({question.sample_test_cases?.length || 0})
         </button>
 
         {question.hints && question.hints.length > 0 && (
           <button
             onClick={() => setActiveTab("hints")}
-            className={`py-3 px-3 border-b-2 transition ${
+            className={`py-2.5 px-3 border-b-2 transition ${
               activeTab === "hints"
-                ? "border-sky-500 text-sky-400 font-semibold"
-                : "border-transparent text-slate-400 hover:text-slate-200"
+                ? "border-[#123E63] text-[#123E63]"
+                : "border-transparent text-[#8993A0] hover:text-[#202B38]"
             }`}
           >
             Hints ({question.hints.length})
@@ -129,163 +129,125 @@ export default function QuestionDetails({ question }: QuestionDetailsProps) {
         )}
       </div>
 
-      {/* Scrollable Content Body */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 text-slate-300 text-sm leading-relaxed">
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-5 text-[#202B38] text-xs sm:text-sm leading-relaxed max-h-[600px]">
         {activeTab === "description" && (
-          <div className="space-y-6">
-            {/* Main Description */}
-            <div className="whitespace-pre-line text-slate-200">
+          <div className="space-y-5">
+            <div className="whitespace-pre-line text-[#202B38] leading-relaxed">
               {question.description}
             </div>
 
-            {/* Constraints */}
             {question.constraints && (
-              <div className="space-y-2 p-4 rounded-lg bg-slate-900/80 border border-slate-800">
-                <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+              <div className="space-y-1.5 p-3.5 rounded-xl bg-[#F8F9FA] border border-[#E5E9EF]">
+                <h3 className="text-[11px] font-bold text-[#123E63] uppercase tracking-wider flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-[#F5A623]" />
                   Constraints & Requirements
                 </h3>
-                <div className="text-xs text-slate-300 font-mono whitespace-pre-line pl-2">
+                <div className="text-xs font-mono text-[#202B38] whitespace-pre-line pl-1">
                   {question.constraints}
                 </div>
               </div>
             )}
 
-            {/* Sample Cases Preview */}
-            {question.sample_test_cases.length > 0 && (
-              <div className="space-y-4 pt-2">
-                <h3 className="text-sm font-semibold text-white">Examples</h3>
-                <div className="space-y-3">
-                  {question.sample_test_cases.map((sample, idx) => (
-                    <div
-                      key={sample.id || idx}
-                      className="p-4 rounded-lg bg-slate-900/60 border border-slate-800 space-y-2"
-                    >
-                      <div className="text-xs font-semibold text-sky-400">
-                        Example {idx + 1}
-                      </div>
+            {question.sample_test_cases && question.sample_test_cases.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <h3 className="text-xs font-bold text-[#8993A0] uppercase tracking-wider">
+                  Examples
+                </h3>
+                {question.sample_test_cases.map((sample, idx) => (
+                  <div
+                    key={sample.id || idx}
+                    className="p-3.5 rounded-xl bg-[#F8F9FA] border border-[#E5E9EF] space-y-2"
+                  >
+                    <span className="text-[11px] font-bold text-[#123E63]">
+                      Example {idx + 1}
+                    </span>
 
-                      <div className="space-y-1.5 text-xs font-mono">
-                        <div className="flex items-start gap-2">
-                          <span className="text-slate-500 select-none min-w-[70px]">Input:</span>
-                          <span className="bg-slate-950 px-2 py-0.5 rounded text-slate-200 border border-slate-800/80 break-all">
-                            {sample.input_data}
-                          </span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="text-slate-500 select-none min-w-[70px]">Output:</span>
-                          <span className="bg-slate-950 px-2 py-0.5 rounded text-emerald-400 border border-slate-800/80 break-all">
-                            {sample.expected_output}
-                          </span>
-                        </div>
+                    <div className="space-y-1 text-xs font-mono">
+                      <div className="flex items-start gap-2">
+                        <span className="text-[#8993A0] select-none min-w-[60px]">Input:</span>
+                        <span className="bg-white px-2 py-0.5 rounded border border-[#E5E9EF] text-[#202B38] break-all">
+                          {sample.input_data}
+                        </span>
                       </div>
-
-                      {sample.explanation && (
-                        <div className="text-xs text-slate-400 pt-1 border-t border-slate-800/60">
-                          <span className="font-semibold text-slate-300">Explanation: </span>
-                          {sample.explanation}
-                        </div>
-                      )}
+                      <div className="flex items-start gap-2">
+                        <span className="text-[#8993A0] select-none min-w-[60px]">Output:</span>
+                        <span className="bg-white px-2 py-0.5 rounded border border-emerald-200 text-emerald-700 break-all font-bold">
+                          {sample.expected_output}
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                </div>
+
+                    {sample.explanation && (
+                      <p className="text-[11px] text-[#8993A0] pt-1 border-t border-[#E5E9EF]">
+                        <strong className="text-[#202B38]">Explanation:</strong> {sample.explanation}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
         )}
 
         {activeTab === "samples" && (
-          <div className="space-y-4">
-            <p className="text-xs text-slate-400">
-              Sample test cases are run when you click &quot;Run Code&quot;. Full submission evaluates all sample and hidden test cases.
-            </p>
-
-            <div className="space-y-4">
-              {question.sample_test_cases.map((sample, idx) => (
-                <div
-                  key={sample.id || idx}
-                  className="p-4 rounded-lg bg-slate-900 border border-slate-800 space-y-3"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-white">Sample Case #{idx + 1}</span>
-                    <button
-                      onClick={() => copyToClipboard(sample.input_data, idx)}
-                      className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white transition"
-                    >
-                      {copiedIndex === idx ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>Copy Input</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 text-xs font-mono">
-                    <div>
-                      <div className="text-slate-400 mb-1">Input:</div>
-                      <pre className="p-2.5 rounded bg-slate-950 text-slate-200 border border-slate-800 overflow-x-auto whitespace-pre-wrap">
-                        {sample.input_data}
-                      </pre>
-                    </div>
-
-                    <div>
-                      <div className="text-slate-400 mb-1">Expected Output:</div>
-                      <pre className="p-2.5 rounded bg-slate-950 text-emerald-400 border border-slate-800 overflow-x-auto whitespace-pre-wrap">
-                        {sample.expected_output}
-                      </pre>
-                    </div>
-                  </div>
-
-                  {sample.explanation && (
-                    <div className="text-xs text-slate-400 bg-slate-950/40 p-2.5 rounded border border-slate-800/40">
-                      <strong className="text-slate-300">Explanation: </strong>
-                      {sample.explanation}
-                    </div>
-                  )}
+          <div className="space-y-3">
+            {question.sample_test_cases.map((sample, idx) => (
+              <div
+                key={sample.id || idx}
+                className="p-3.5 rounded-xl bg-[#F8F9FA] border border-[#E5E9EF] space-y-2 text-xs font-mono"
+              >
+                <div className="flex items-center justify-between text-[11px] font-sans font-bold">
+                  <span>Sample Case #{idx + 1}</span>
+                  <button
+                    onClick={() => copyToClipboard(sample.input_data, idx)}
+                    className="text-[#123E63] hover:underline flex items-center gap-1"
+                  >
+                    {copiedIndex === idx ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy Input</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-              ))}
-            </div>
+                <div>
+                  <span className="text-[#8993A0] block text-[10px] uppercase font-sans">Input:</span>
+                  <div className="bg-white p-2 rounded-lg border border-[#E5E9EF] mt-1">{sample.input_data}</div>
+                </div>
+                <div>
+                  <span className="text-[#8993A0] block text-[10px] uppercase font-sans">Expected:</span>
+                  <div className="bg-white p-2 rounded-lg border border-[#E5E9EF] text-emerald-700 font-bold mt-1">
+                    {sample.expected_output}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
-        {activeTab === "hints" && question.hints && (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-400">
-              Need a nudge? Expand hints one at a time to guide your problem-solving.
-            </p>
-
-            {question.hints.map((hint, idx) => {
+        {activeTab === "hints" && (
+          <div className="space-y-2.5">
+            {question.hints?.map((hint, idx) => {
               const isRevealed = revealedHints[idx];
               return (
-                <div
-                  key={idx}
-                  className="rounded-lg bg-slate-900 border border-slate-800 overflow-hidden"
-                >
+                <div key={idx} className="p-3.5 rounded-xl border border-[#E5E9EF] bg-[#F8F9FA]">
                   <button
                     onClick={() => toggleHint(idx)}
-                    className="w-full px-4 py-3 text-left flex items-center justify-between text-xs font-medium text-slate-200 hover:bg-slate-800/60 transition"
+                    className="w-full flex items-center justify-between text-xs font-bold text-[#123E63]"
                   >
-                    <span className="flex items-center gap-2">
-                      <HelpCircle className="w-4 h-4 text-sky-400" />
-                      Hint {idx + 1}
-                    </span>
-                    {isRevealed ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    )}
+                    <span>Hint {idx + 1}</span>
+                    {isRevealed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
-
                   {isRevealed && (
-                    <div className="px-4 py-3 bg-slate-950/60 border-t border-slate-800 text-xs text-slate-300 whitespace-pre-line leading-relaxed">
+                    <p className="text-xs text-[#202B38] mt-2 pt-2 border-t border-[#E5E9EF] leading-relaxed">
                       {hint}
-                    </div>
+                    </p>
                   )}
                 </div>
               );

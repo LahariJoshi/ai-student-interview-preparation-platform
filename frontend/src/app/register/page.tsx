@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { UserPlus, Mail, Lock, User, AlertCircle } from "lucide-react";
+import { UserPlus, Mail, Lock, User, AlertCircle, ArrowRight } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -31,58 +31,68 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto py-12">
-      <div className="glass-card p-8 space-y-6">
+    <div className="w-full">
+      <div className="bg-white rounded-2xl p-8 shadow-card border border-[#E5E9EF] space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 bg-sky-950/80 border border-sky-800 rounded-xl flex items-center justify-center mx-auto text-sky-400">
-            <UserPlus className="w-6 h-6" />
+          <div className="w-16 h-16 rounded-full bg-[#123E63] border-4 border-[#1E5685] flex items-center justify-center mx-auto shadow-md mb-2">
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#123E63]">
+              <UserPlus className="w-6 h-6 stroke-[2.2]" />
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-white">Student Registration</h2>
-          <p className="text-slate-400 text-sm">Create an account to start preparing for your placement interviews</p>
+          <h2 className="text-2xl font-extrabold text-[#202B38] tracking-tight">Student Registration</h2>
+          <p className="text-[#8993A0] text-xs">
+            Create an account to master technical and HR interview rounds
+          </p>
         </div>
 
         {error && (
-          <div className="bg-red-950/80 border border-red-800 text-red-300 p-3 rounded-lg flex items-start gap-2 text-sm">
-            <AlertCircle className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
+          <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-xl flex items-start gap-2.5 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Full Name</label>
+            <label className="block text-[11px] font-bold text-[#8993A0] uppercase tracking-wider">
+              Full Name
+            </label>
             <div className="relative">
-              <User className="w-5 h-5 text-slate-500 absolute left-3 top-2.5" />
+              <User className="w-4 h-4 text-[#8993A0] absolute left-3.5 top-3" />
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Jane Doe"
-                className="w-full bg-slate-900 border border-slate-700 focus:border-sky-500 text-white rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none transition"
+                placeholder="Lahari Joshi"
+                className="w-full bg-[#F8F9FA] border border-[#E5E9EF] focus:border-[#123E63] text-[#202B38] rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:outline-none transition"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Email Address</label>
+            <label className="block text-[11px] font-bold text-[#8993A0] uppercase tracking-wider">
+              College / Student Email
+            </label>
             <div className="relative">
-              <Mail className="w-5 h-5 text-slate-500 absolute left-3 top-2.5" />
+              <Mail className="w-4 h-4 text-[#8993A0] absolute left-3.5 top-3" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="student@college.edu"
-                className="w-full bg-slate-900 border border-slate-700 focus:border-sky-500 text-white rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none transition"
+                className="w-full bg-[#F8F9FA] border border-[#E5E9EF] focus:border-[#123E63] text-[#202B38] rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:outline-none transition"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Password</label>
+            <label className="block text-[11px] font-bold text-[#8993A0] uppercase tracking-wider">
+              Password
+            </label>
             <div className="relative">
-              <Lock className="w-5 h-5 text-slate-500 absolute left-3 top-2.5" />
+              <Lock className="w-4 h-4 text-[#8993A0] absolute left-3.5 top-3" />
               <input
                 type="password"
                 required
@@ -90,7 +100,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minimum 6 characters"
-                className="w-full bg-slate-900 border border-slate-700 focus:border-sky-500 text-white rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none transition"
+                className="w-full bg-[#F8F9FA] border border-[#E5E9EF] focus:border-[#123E63] text-[#202B38] rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:outline-none transition"
               />
             </div>
           </div>
@@ -98,18 +108,19 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition text-sm flex items-center justify-center gap-2"
+            className="w-full bg-[#F5A623] hover:bg-[#E09212] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition text-xs shadow-md flex items-center justify-center gap-2 mt-2"
           >
-            {isSubmitting ? "Creating Account..." : "Register Account"}
+            <span>{isSubmitting ? "Creating Account..." : "Register & Start Preparing"}</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <p className="text-center text-xs text-slate-400">
-          Already registered?{" "}
-          <Link href="/login" className="text-sky-400 hover:underline font-medium">
+        <div className="pt-2 text-center text-xs text-[#8993A0] border-t border-[#E5E9EF]">
+          Already have an account?{" "}
+          <Link href="/login" className="text-[#123E63] hover:text-[#0D3557] font-bold">
             Sign in here
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

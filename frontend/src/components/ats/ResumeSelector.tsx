@@ -1,13 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import {
-  FileText,
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
-} from "lucide-react";
+import { FileText, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface ResumeItem {
   id: string;
@@ -39,123 +34,93 @@ export default function ResumeSelector({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchResumes();
-  }, []);
-
-  const fetchResumes = async () => {
+  const fetchResumes = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      const data = await apiFetch<ResumeListResponse>(
-        "/resume/my-resumes"
-      );
-
-      setResumes(data.resumes);
+      const data = await apiFetch<ResumeListResponse>(`/resume/my-resumes?t=${Date.now()}`, {
+        cache: "no-store",
+      });
+      const list = data.resumes || [];
+      setResumes(list);
+      if (list.length === 0) {
+        onSelect("");
+      } else if (!selectedResumeId || !list.some((r) => r.id === selectedResumeId)) {
+        onSelect(list[0].id);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load resumes.");
+      setResumes([]);
+      onSelect("");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedResumeId, onSelect]);
+
+  useEffect(() => {
+    fetchResumes();
+
+    const handleResumesUpdated = () => {
+      fetchResumes();
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "last_resume_update") {
+        fetchResumes();
+      }
+    };
+
+    window.addEventListener("resumes_updated", handleResumesUpdated);
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("focus", handleResumesUpdated);
+
+    return () => {
+      window.removeEventListener("resumes_updated", handleResumesUpdated);
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("focus", handleResumesUpdated);
+    };
+  }, [fetchResumes]);
 
   return (
-    <div className="glass-card p-6 space-y-4">
-      <div>
-        <h2 className="text-lg font-bold text-white flex items-center gap-2">
-          <FileText className="w-5 h-5 text-sky-400" />
-          Step 1: Select Your Resume
-        </h2>
-
-        <p className="text-sm text-slate-400 mt-1">
-          Choose an uploaded resume to compare against the selected job
-          description.
-        </p>
+    <div className="bg-white rounded-2xl p-6 shadow-card border border-[#E5E9EF] space-y-4">
+      <div className="flex items-center justify-between border-b border-[#E5E9EF] pb-3">
+        <div className="flex items-center gap-2">
+          <FileText className="w-4 h-4 text-[#123E63]" />
+          <h3 className="text-base font-bold text-[#202B38]">1. Select Resume</h3>
+        </div>
+        <span className="text-xs text-[#8993A0]">{resumes.length} available</span>
       </div>
 
-      {isLoading && (
-        <div className="flex items-center justify-center py-8 text-slate-400">
-          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          Loading your resumes...
+      {isLoading ? (
+        <div className="py-6 text-center text-[#8993A0] text-xs">Loading resumes...</div>
+      ) : error ? (
+        <div className="p-3 rounded-xl bg-red-50 text-red-600 text-xs">{error}</div>
+      ) : resumes.length === 0 ? (
+        <div className="py-6 text-center text-[#8993A0] text-xs">
+          No resumes uploaded yet. Go to Resume Analysis to upload one.
         </div>
-      )}
-
-      {error && (
-        <div className="bg-red-950/80 border border-red-800 text-red-300 p-3 rounded-lg flex items-start gap-2 text-sm">
-          <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {!isLoading && !error && resumes.length === 0 && (
-        <div className="text-center py-8 text-slate-400 text-sm">
-          <p>No resumes uploaded yet.</p>
-          <p className="mt-1">
-            Upload a resume from the Resume page before starting ATS analysis.
-          </p>
-        </div>
-      )}
-
-      {!isLoading && !error && resumes.length > 0 && (
-        <div className="space-y-3">
+      ) : (
+        <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
           {resumes.map((resume) => {
             const isSelected = selectedResumeId === resume.id;
-            const isReady = resume.extraction_status === "completed";
-
             return (
-              <button
+              <div
                 key={resume.id}
-                type="button"
-                disabled={!isReady}
                 onClick={() => onSelect(resume.id)}
-                className={`w-full text-left p-4 rounded-xl border transition ${
-                  !isReady
-                    ? "border-slate-800 bg-slate-900/50 opacity-60 cursor-not-allowed"
-                    : isSelected
-                    ? "border-sky-500 bg-sky-950/40"
-                    : "border-slate-800 bg-slate-900 hover:border-slate-600"
+                className={`p-3 rounded-xl border cursor-pointer transition flex items-center justify-between text-xs ${
+                  isSelected
+                    ? "bg-[#FFF6E8] border-[#F5A623] shadow-xs"
+                    : "bg-[#F8F9FA] border-[#E5E9EF] hover:border-[#BCD3E6]"
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                        isSelected
-                          ? "bg-sky-900/60 text-sky-300"
-                          : "bg-slate-800 text-sky-400"
-                      }`}
-                    >
-                      <FileText className="w-5 h-5" />
-                    </div>
-
-                    <div>
-                      <h3 className="text-white font-medium">
-                        {resume.original_filename}
-                      </h3>
-
-                      <p className="text-xs text-slate-500 mt-1">
-                        Uploaded on{" "}
-                        {new Date(resume.created_at).toLocaleDateString()}
-                      </p>
-
-                      {isReady ? (
-                        <p className="text-xs text-emerald-400 mt-2">
-                          ✓ Text extracted — ready for ATS analysis
-                        </p>
-                      ) : (
-                        <p className="text-xs text-amber-400 mt-2">
-                          ⚠ Extract resume text before using ATS analysis
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {isSelected && (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                  )}
+                <div className="flex items-center gap-2.5 truncate">
+                  <FileText className={`w-4 h-4 shrink-0 ${isSelected ? "text-[#F5A623]" : "text-[#123E63]"}`} />
+                  <span className="font-bold text-[#202B38] truncate">{resume.original_filename}</span>
                 </div>
-              </button>
+                {isSelected && (
+                  <CheckCircle2 className="w-4 h-4 text-[#F5A623] shrink-0" />
+                )}
+              </div>
             );
           })}
         </div>

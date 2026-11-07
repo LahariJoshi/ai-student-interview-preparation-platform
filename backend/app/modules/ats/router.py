@@ -361,3 +361,64 @@ async def analyze_ats(
 
         "analyzed_at": analysis.analyzed_at,
     }
+
+
+@router.get("/latest")
+async def get_latest_ats_analysis(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ATSAnalysis)
+        .where(ATSAnalysis.user_id == current_user.id)
+        .order_by(ATSAnalysis.created_at.desc())
+        .limit(1)
+    )
+    analysis = result.scalar_one_or_none()
+    if not analysis:
+        return None
+
+    return {
+        "analysis_id": analysis.id,
+        "resume_id": analysis.resume_id,
+        "job_description_id": analysis.job_description_id,
+        "analysis_status": analysis.analysis_status,
+        "ats_score": analysis.ats_score,
+        "formatting_score": analysis.formatting_score,
+        "keyword_match_score": analysis.keyword_match_score,
+        "semantic_similarity_score": analysis.semantic_similarity_score,
+        "action_impact_score": analysis.action_impact_score,
+        "matched_skills": analysis.matched_skills_json,
+        "missing_skills": analysis.missing_skills_json,
+        "jd_requirements": analysis.jd_requirements_json,
+        "analyzed_at": analysis.analyzed_at,
+    }
+
+
+@router.get("/history")
+async def get_ats_analysis_history(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ATSAnalysis)
+        .where(ATSAnalysis.user_id == current_user.id)
+        .order_by(ATSAnalysis.created_at.desc())
+        .limit(20)
+    )
+    analyses = result.scalars().all()
+    return [
+        {
+            "analysis_id": a.id,
+            "resume_id": a.resume_id,
+            "job_description_id": a.job_description_id,
+            "analysis_status": a.analysis_status,
+            "ats_score": a.ats_score,
+            "formatting_score": a.formatting_score,
+            "keyword_match_score": a.keyword_match_score,
+            "semantic_similarity_score": a.semantic_similarity_score,
+            "action_impact_score": a.action_impact_score,
+            "analyzed_at": a.analyzed_at,
+        }
+        for a in analyses
+    ]

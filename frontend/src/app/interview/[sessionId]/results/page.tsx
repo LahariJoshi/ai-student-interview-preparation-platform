@@ -19,6 +19,8 @@ import {
   RotateCcw,
   History,
   HelpCircle,
+  Briefcase,
+  Target,
 } from "lucide-react";
 import { InterviewResultsResponse } from "@/types/interview";
 
@@ -57,9 +59,9 @@ export default function InterviewResultsPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="py-24 text-center text-slate-400">
-        <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-sm">Compiling evaluation analytics & transparent rubric...</p>
+      <div className="py-24 text-center text-[#8993A0]">
+        <div className="w-8 h-8 border-3 border-[#123E63] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-sm font-medium">Compiling evaluation analytics & transparent rubric...</p>
       </div>
     );
   }
@@ -67,14 +69,14 @@ export default function InterviewResultsPage() {
   if (errorMsg || !results) {
     return (
       <div className="max-w-xl mx-auto py-16 text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-rose-950/60 border border-rose-800 flex items-center justify-center text-rose-400 mx-auto">
+        <div className="w-14 h-14 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500 mx-auto">
           <AlertTriangle className="w-6 h-6" />
         </div>
-        <h2 className="text-xl font-bold text-white">Results Unavailable</h2>
-        <p className="text-slate-400 text-sm">{errorMsg || "Could not retrieve results."}</p>
+        <h2 className="text-xl font-bold text-[#202B38]">Results Unavailable</h2>
+        <p className="text-[#8993A0] text-sm">{errorMsg || "Could not retrieve results."}</p>
         <Link
           href="/interview"
-          className="inline-block px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition"
+          className="inline-block px-6 py-2.5 bg-[#123E63] hover:bg-[#0D3557] text-white rounded-xl text-sm font-semibold transition shadow-sm"
         >
           Return to Studio
         </Link>
@@ -83,41 +85,41 @@ export default function InterviewResultsPage() {
   }
 
   const getScoreBadgeColor = (score: number) => {
-    if (score >= 80) return "text-emerald-400 border-emerald-500/40 bg-emerald-950/50";
-    if (score >= 60) return "text-sky-400 border-sky-500/40 bg-sky-950/50";
-    return "text-amber-400 border-amber-500/40 bg-amber-950/50";
+    if (score >= 80) return "text-emerald-700 border-emerald-200 bg-emerald-50";
+    if (score >= 60) return "text-[#123E63] border-blue-200 bg-blue-50";
+    return "text-amber-700 border-amber-200 bg-amber-50";
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-4 space-y-8">
+    <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs font-semibold mb-2">
-            <Award className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#123E63]/10 text-[#123E63] text-xs font-semibold mb-2">
+            <Award className="w-3.5 h-3.5 text-[#F5A623]" />
             Interview Performance Report
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl font-bold text-[#202B38] tracking-tight">
             Session Evaluation & Feedback
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Target Role: <span className="text-slate-200 font-medium">{results.target_role}</span> • Level: {results.experience_level} • {new Date(results.started_at).toLocaleDateString()}
+          <p className="text-[#8993A0] text-xs mt-1">
+            Target Role: <span className="text-[#202B38] font-semibold">{results.target_role}</span> • Level: {results.experience_level} • {new Date(results.started_at).toLocaleDateString()}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <Link
             href="/interview"
-            className="flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-xl transition shadow-lg shadow-sky-950"
+            className="flex items-center gap-2 px-4 py-2 bg-[#F5A623] hover:bg-[#E09612] text-white text-xs font-semibold rounded-xl transition shadow-sm"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Practice Another</span>
           </Link>
           <Link
             href="/interview/history"
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-sm font-medium rounded-xl transition"
+            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-[#E5E9EF] text-[#202B38] text-xs font-semibold rounded-xl transition shadow-sm"
           >
-            <History className="w-4 h-4 text-sky-400" />
+            <History className="w-4 h-4 text-[#123E63]" />
             <span>History</span>
           </Link>
         </div>
@@ -125,52 +127,52 @@ export default function InterviewResultsPage() {
 
       {/* Primary Score Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Overall Score */}
-        <div className="glass-card p-6 flex flex-col items-center justify-center text-center space-y-2 border-slate-800">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        {/* Overall Score - Solid Navy Card */}
+        <div className="bg-[#123E63] text-white rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center space-y-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-white/70">
             Overall Readiness Score
           </span>
-          <div className={`text-4xl font-extrabold px-4 py-2 rounded-2xl border ${getScoreBadgeColor(results.overall_score)}`}>
-            {Math.round(results.overall_score)}<span className="text-xl font-normal text-slate-400">/100</span>
+          <div className="text-4xl font-extrabold text-white">
+            {Math.round(results.overall_score)}<span className="text-lg font-normal text-white/70">/100</span>
           </div>
-          <p className="text-xs text-slate-400">Automated student practice evaluation</p>
+          <p className="text-xs text-white/70">Automated student practice evaluation</p>
         </div>
 
-        {/* Technical Accuracy */}
-        <div className="glass-card p-6 flex flex-col items-center justify-center text-center space-y-2 border-slate-800">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        {/* Technical Accuracy - White Card */}
+        <div className="bg-white border border-[#E5E9EF] rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center space-y-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8993A0]">
             Technical Proficiency
           </span>
-          <div className="text-3xl font-bold text-sky-400">
-            {Math.round(results.technical_score)}<span className="text-lg font-normal text-slate-500">/100</span>
+          <div className="text-3xl font-extrabold text-[#123E63]">
+            {Math.round(results.technical_score)}<span className="text-lg font-normal text-[#8993A0]">/100</span>
           </div>
-          <p className="text-xs text-slate-400">Concept coverage & architecture depth</p>
+          <p className="text-xs text-[#8993A0]">Concept coverage & architecture depth</p>
         </div>
 
-        {/* Communication & Delivery */}
-        <div className="glass-card p-6 flex flex-col items-center justify-center text-center space-y-2 border-slate-800">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        {/* Communication & Delivery - White Card */}
+        <div className="bg-white border border-[#E5E9EF] rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center space-y-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8993A0]">
             Clarity & Communication
           </span>
-          <div className="text-3xl font-bold text-indigo-400">
-            {Math.round(results.communication_score)}<span className="text-lg font-normal text-slate-500">/100</span>
+          <div className="text-3xl font-extrabold text-[#F5A623]">
+            {Math.round(results.communication_score)}<span className="text-lg font-normal text-[#8993A0]">/100</span>
           </div>
-          <p className="text-xs text-slate-400">Structure, articulation & pacing</p>
+          <p className="text-xs text-[#8993A0]">Structure, articulation & pacing</p>
         </div>
       </div>
 
       {/* Strengths & Weaknesses Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Strengths */}
-        <div className="glass-card p-6 space-y-3">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+        <div className="bg-white border border-[#E5E9EF] rounded-2xl p-6 shadow-sm space-y-3">
+          <h3 className="text-sm font-bold text-[#202B38] flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             Demonstrated Strengths
           </h3>
-          <ul className="space-y-2 text-sm text-slate-300">
+          <ul className="space-y-2 text-xs text-[#202B38]">
             {results.strengths.map((str, idx) => (
-              <li key={idx} className="flex items-start gap-2 bg-emerald-950/20 border border-emerald-900/40 p-2.5 rounded-lg">
-                <span className="text-emerald-400 font-bold">•</span>
+              <li key={idx} className="flex items-start gap-2 bg-emerald-50/60 border border-emerald-100 p-3 rounded-xl">
+                <span className="text-emerald-600 font-bold">•</span>
                 <span>{str}</span>
               </li>
             ))}
@@ -178,15 +180,15 @@ export default function InterviewResultsPage() {
         </div>
 
         {/* Weaknesses / Growth Areas */}
-        <div className="glass-card p-6 space-y-3">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-amber-400" />
+        <div className="bg-white border border-[#E5E9EF] rounded-2xl p-6 shadow-sm space-y-3">
+          <h3 className="text-sm font-bold text-[#202B38] flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-[#F5A623]" />
             Key Areas for Improvement
           </h3>
-          <ul className="space-y-2 text-sm text-slate-300">
+          <ul className="space-y-2 text-xs text-[#202B38]">
             {results.weaknesses.map((w, idx) => (
-              <li key={idx} className="flex items-start gap-2 bg-amber-950/20 border border-amber-900/40 p-2.5 rounded-lg">
-                <span className="text-amber-400 font-bold">•</span>
+              <li key={idx} className="flex items-start gap-2 bg-amber-50/60 border border-amber-100 p-3 rounded-xl">
+                <span className="text-[#F5A623] font-bold">•</span>
                 <span>{w}</span>
               </li>
             ))}
@@ -196,27 +198,27 @@ export default function InterviewResultsPage() {
 
       {/* Actionable Learning Recommendations */}
       {results.recommendations && results.recommendations.length > 0 && (
-        <div className="glass-card p-6 space-y-4">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-sky-400" />
+        <div className="bg-white border border-[#E5E9EF] rounded-2xl p-6 shadow-sm space-y-4">
+          <h3 className="text-sm font-bold text-[#202B38] flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#F5A623]" />
             Personalized Next Steps & Practice Recommendations
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {results.recommendations.map((rec, i) => (
-              <div key={i} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col justify-between space-y-3">
+              <div key={i} className="bg-[#F8FAFC] border border-[#E5E9EF] p-4 rounded-xl flex flex-col justify-between space-y-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    {rec.action_type === "coding" && <Code2 className="w-4 h-4 text-emerald-400" />}
-                    {rec.action_type === "resume" && <FileText className="w-4 h-4 text-indigo-400" />}
-                    {rec.action_type === "study" && <BookOpen className="w-4 h-4 text-sky-400" />}
-                    <h4 className="text-sm font-semibold text-white">{rec.title}</h4>
+                    {rec.action_type === "coding" && <Code2 className="w-4 h-4 text-emerald-600" />}
+                    {rec.action_type === "resume" && <FileText className="w-4 h-4 text-[#123E63]" />}
+                    {rec.action_type === "study" && <BookOpen className="w-4 h-4 text-[#F5A623]" />}
+                    <h4 className="text-xs font-bold text-[#202B38]">{rec.title}</h4>
                   </div>
-                  <p className="text-xs text-slate-400">{rec.description}</p>
+                  <p className="text-[11px] text-[#8993A0] leading-relaxed">{rec.description}</p>
                 </div>
 
                 <Link
                   href={rec.link}
-                  className="text-xs text-sky-400 hover:text-sky-300 font-medium inline-flex items-center gap-1 mt-auto pt-2"
+                  className="text-xs text-[#123E63] hover:text-[#0D3557] font-semibold inline-flex items-center gap-1 mt-auto pt-2"
                 >
                   <span>Practice Now</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -229,8 +231,8 @@ export default function InterviewResultsPage() {
 
       {/* Detailed Question by Question Rubric Breakdown */}
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <HelpCircle className="w-5 h-5 text-sky-400" />
+        <h2 className="text-base font-bold text-[#202B38] flex items-center gap-2">
+          <HelpCircle className="w-4 h-4 text-[#123E63]" />
           Question Breakdown & Transparent Rubrics
         </h2>
 
@@ -238,13 +240,13 @@ export default function InterviewResultsPage() {
           const matchingAnswer = results.answers.find((a) => a.question_id === q.id);
 
           return (
-            <div key={q.id} className="glass-card p-6 space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div key={q.id} className="bg-white border border-[#E5E9EF] rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-[#E5E9EF] pb-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-md bg-sky-950 border border-sky-800 text-sky-400 font-bold text-xs flex items-center justify-center">
+                  <span className="w-6 h-6 rounded-lg bg-[#123E63] text-white font-bold text-xs flex items-center justify-center">
                     {idx + 1}
                   </span>
-                  <span className="text-xs font-semibold text-slate-400 uppercase">
+                  <span className="text-[11px] font-semibold text-[#8993A0] uppercase">
                     {q.category.replace("_", " ")} {q.topic_or_skill ? `• ${q.topic_or_skill}` : ""}
                   </span>
                 </div>
@@ -257,34 +259,34 @@ export default function InterviewResultsPage() {
               </div>
 
               {/* Question text */}
-              <p className="text-base font-medium text-white">{q.question_text}</p>
+              <p className="text-sm font-semibold text-[#202B38]">{q.question_text}</p>
 
               {/* Student Answer */}
               {matchingAnswer ? (
-                <div className="space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-sm">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span className="font-semibold text-slate-300">Your Response:</span>
+                <div className="space-y-3 bg-[#F8FAFC] p-4 rounded-xl border border-[#E5E9EF] text-xs">
+                  <div className="flex items-center justify-between text-xs text-[#8993A0]">
+                    <span className="font-semibold text-[#202B38]">Your Response:</span>
                     {matchingAnswer.is_voice_response && (
-                      <span className="flex items-center gap-1 text-sky-400">
-                        <Volume2 className="w-3.5 h-3.5" />
+                      <span className="flex items-center gap-1 text-[#123E63] font-medium">
+                        <Volume2 className="w-3.5 h-3.5 text-[#F5A623]" />
                         Voice Transcribed
                       </span>
                     )}
                   </div>
-                  <p className="text-slate-300 leading-relaxed italic">
+                  <p className="text-[#202B38] leading-relaxed italic bg-white p-3 rounded-lg border border-[#E5E9EF]">
                     "{matchingAnswer.answer_text}"
                   </p>
 
                   {/* Delivery metrics if voice */}
                   {matchingAnswer.delivery_metrics && matchingAnswer.delivery_metrics.speaking_rate_wpm ? (
-                    <div className="pt-2 border-t border-slate-800/80 text-xs text-slate-400 flex flex-wrap gap-4">
+                    <div className="pt-2 border-t border-[#E5E9EF] text-xs text-[#8993A0] flex flex-wrap gap-4">
                       <span>
-                        Pacing: <strong className="text-slate-200">{matchingAnswer.delivery_metrics.speaking_rate_wpm} WPM</strong>
+                        Pacing: <strong className="text-[#202B38]">{matchingAnswer.delivery_metrics.speaking_rate_wpm} WPM</strong>
                       </span>
                       <span>
-                        Fillers: <strong className="text-slate-200">{matchingAnswer.delivery_metrics.filler_count || 0}</strong>
+                        Fillers: <strong className="text-[#202B38]">{matchingAnswer.delivery_metrics.filler_count || 0}</strong>
                       </span>
-                      <span className="text-slate-400 italic">
+                      <span className="italic text-[#8993A0]">
                         {matchingAnswer.delivery_metrics.pacing_verdict}
                       </span>
                     </div>
@@ -292,17 +294,17 @@ export default function InterviewResultsPage() {
 
                   {/* Feedback and suggestions */}
                   {matchingAnswer.detailed_feedback && (
-                    <div className="pt-2 border-t border-slate-800/80 space-y-1 text-xs">
-                      <span className="font-semibold text-sky-400">Evaluation Feedback:</span>
-                      <p className="text-slate-300">{matchingAnswer.detailed_feedback}</p>
+                    <div className="pt-2 border-t border-[#E5E9EF] space-y-1 text-xs">
+                      <span className="font-semibold text-[#123E63]">Evaluation Feedback:</span>
+                      <p className="text-[#202B38] leading-relaxed">{matchingAnswer.detailed_feedback}</p>
                     </div>
                   )}
 
                   {/* Improvement tips */}
                   {matchingAnswer.improvement_tips && matchingAnswer.improvement_tips.length > 0 && (
                     <div className="space-y-1 text-xs pt-1">
-                      <span className="font-semibold text-amber-400">Suggestions to Elevate:</span>
-                      <ul className="list-disc list-inside text-slate-400 space-y-0.5">
+                      <span className="font-semibold text-[#F5A623]">Suggestions to Elevate:</span>
+                      <ul className="list-disc list-inside text-[#202B38] space-y-0.5">
                         {matchingAnswer.improvement_tips.map((tip, ti) => (
                           <li key={ti}>{tip}</li>
                         ))}
@@ -311,17 +313,17 @@ export default function InterviewResultsPage() {
                   )}
                 </div>
               ) : (
-                <div className="text-xs text-slate-500 italic">No answer submitted for this question.</div>
+                <div className="text-xs text-[#8993A0] italic">No answer submitted for this question.</div>
               )}
 
               {/* Reference Answer */}
               {q.reference_answer && (
-                <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800/60 text-xs space-y-1.5">
-                  <span className="font-semibold text-slate-400 flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-sky-400" />
+                <div className="bg-[#123E63]/5 p-4 rounded-xl border border-[#123E63]/15 text-xs space-y-1.5">
+                  <span className="font-semibold text-[#123E63] flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-[#F5A623]" />
                     Reference Answer / Ideal Strategy:
                   </span>
-                  <p className="text-slate-300 leading-relaxed">{q.reference_answer}</p>
+                  <p className="text-[#202B38] leading-relaxed">{q.reference_answer}</p>
                 </div>
               )}
             </div>

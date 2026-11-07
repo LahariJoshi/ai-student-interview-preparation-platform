@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2, Briefcase, Building2 } from "lucide-react";
-
+import { Trash2, Briefcase, Building2, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import {
-  JobDescription,
-  JobDescriptionListResponse,
-} from "@/types/ats";
+import { JobDescription, JobDescriptionListResponse } from "@/types/ats";
 
 interface JobDescriptionListProps {
   refreshKey: number;
@@ -27,18 +23,10 @@ export default function JobDescriptionList({
     try {
       setIsLoading(true);
       setError("");
-
-      const response = await apiFetch<JobDescriptionListResponse>(
-        "/ats/job-descriptions"
-      );
-
-      setJobDescriptions(response.job_descriptions);
+      const response = await apiFetch<JobDescriptionListResponse>("/ats/job-descriptions");
+      setJobDescriptions(response.job_descriptions || []);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load job descriptions."
-      );
+      setError(err instanceof Error ? err.message : "Failed to load job descriptions.");
     } finally {
       setIsLoading(false);
     }
@@ -52,25 +40,13 @@ export default function JobDescriptionList({
     try {
       setDeletingId(jobDescriptionId);
       setError("");
-
-      await apiFetch<{ message: string }>(
-        `/ats/job-descriptions/${jobDescriptionId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      setJobDescriptions((current) =>
-        current.filter((job) => job.id !== jobDescriptionId)
-      );
-
+      await apiFetch<{ message: string }>(`/ats/job-descriptions/${jobDescriptionId}`, {
+        method: "DELETE",
+      });
+      setJobDescriptions((current) => current.filter((job) => job.id !== jobDescriptionId));
       onDeleted(jobDescriptionId);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to delete job description."
-      );
+      setError(err instanceof Error ? err.message : "Failed to delete job description.");
     } finally {
       setDeletingId(null);
     }
@@ -78,81 +54,61 @@ export default function JobDescriptionList({
 
   if (isLoading) {
     return (
-      <div className="glass-card p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-5 bg-slate-800 rounded w-1/3" />
-          <div className="h-20 bg-slate-800 rounded" />
-          <div className="h-20 bg-slate-800 rounded" />
-        </div>
+      <div className="bg-white rounded-2xl p-6 shadow-card border border-[#E5E9EF] animate-pulse space-y-3">
+        <div className="h-4 bg-slate-100 rounded w-1/3" />
+        <div className="h-16 bg-slate-100 rounded-xl" />
+        <div className="h-16 bg-slate-100 rounded-xl" />
       </div>
     );
   }
 
   return (
-    <div className="glass-card p-6 space-y-5">
-      <div>
-        <h2 className="text-xl font-bold text-white">
-          Saved Job Descriptions
-        </h2>
-
-        <p className="text-sm text-slate-400 mt-1">
-          Your saved target roles for ATS analysis.
-        </p>
+    <div className="bg-white rounded-2xl p-6 shadow-card border border-[#E5E9EF] space-y-4">
+      <div className="flex items-center justify-between border-b border-[#E5E9EF] pb-3">
+        <div className="flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-[#123E63]" />
+          <h3 className="text-base font-bold text-[#202B38]">Saved Target Roles</h3>
+        </div>
+        <span className="text-xs text-[#8993A0]">{jobDescriptions.length} Available</span>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-800 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
           {error}
         </div>
       )}
 
       {jobDescriptions.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-700 p-8 text-center">
-          <Briefcase className="w-8 h-8 text-slate-500 mx-auto mb-3" />
-
-          <p className="text-slate-300 font-medium">
-            No job descriptions saved yet.
-          </p>
-
-          <p className="text-sm text-slate-500 mt-1">
-            Add a target job description to begin ATS preparation.
-          </p>
+        <div className="py-10 text-center text-[#8993A0] text-xs">
+          No job descriptions saved yet. Use the form to add one.
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
           {jobDescriptions.map((job) => (
             <div
               key={job.id}
-              className="rounded-xl border border-slate-700 bg-slate-900/60 p-4"
+              className="p-3.5 rounded-xl border border-[#E5E9EF] bg-[#F8F9FA] hover:bg-white hover:border-[#BCD3E6] transition flex items-center justify-between gap-3"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 space-y-2">
-                  <h3 className="text-base font-semibold text-white">
-                    {job.title}
-                  </h3>
-
-                  {job.company_name && (
-                    <div className="flex items-center gap-2 text-sm text-slate-400">
-                      <Building2 className="w-4 h-4" />
-                      <span>{job.company_name}</span>
-                    </div>
-                  )}
-
-                  <p className="text-sm text-slate-400 line-clamp-3">
-                    {job.description_text}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleDelete(job.id)}
-                  disabled={deletingId === job.id}
-                  className="shrink-0 p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/40 transition disabled:opacity-50"
-                  title="Delete job description"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+              <div className="min-w-0">
+                <h4 className="text-xs font-bold text-[#202B38] truncate">{job.title}</h4>
+                <p className="text-[11px] text-[#8993A0] truncate">
+                  {job.company_name || "Company Not Specified"}
+                </p>
               </div>
+
+              <button
+                type="button"
+                onClick={() => handleDelete(job.id)}
+                disabled={deletingId === job.id}
+                className="p-1.5 rounded-lg text-[#8993A0] hover:text-red-600 hover:bg-red-50 transition shrink-0"
+                title="Delete Job Description"
+              >
+                {deletingId === job.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+              </button>
             </div>
           ))}
         </div>

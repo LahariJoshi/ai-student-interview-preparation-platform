@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import QuestionList from "@/components/coding/QuestionList";
 import CodingProgress from "@/components/coding/CodingProgress";
-import { Code2, BarChart2, Sparkles, BookOpen } from "lucide-react";
+import { Code2, BarChart2, BookOpen, Sparkles } from "lucide-react";
 
 export default function CodingPage() {
   const { user, isLoading } = useAuth();
@@ -14,11 +14,9 @@ export default function CodingPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-slate-400">Loading coding environment...</p>
-        </div>
+      <div className="py-20 text-center text-[#8993A0]">
+        <div className="animate-spin w-8 h-8 border-2 border-[#123E63] border-t-transparent rounded-full mx-auto mb-4" />
+        <p className="text-xs font-semibold">Loading coding sandbox...</p>
       </div>
     );
   }
@@ -29,55 +27,51 @@ export default function CodingPage() {
   }
 
   return (
-    <div className="space-y-8 py-2">
+    <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-card border border-[#E5E9EF] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-950/80 border border-sky-800 text-sky-300 text-xs font-semibold mb-2">
-            <Code2 className="w-3.5 h-3.5 text-sky-400" />
-            Member-2 Coding Assessment Sandbox
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#123E63]/10 border border-[#123E63]/20 text-[#123E63] text-xs font-semibold mb-2">
+            <Code2 className="w-3.5 h-3.5 text-[#F5A623]" />
+            Algorithmic Problem Sandbox
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#202B38] tracking-tight">
             Technical Coding Practice
-          </h1>
-          <p className="text-slate-400 text-sm mt-1 max-w-2xl">
-            Sharpen algorithmic problem-solving skills with multi-language execution, verified test cases, and real-time proficiency analytics.
+          </h2>
+          <p className="text-xs sm:text-sm text-[#8993A0] mt-1">
+            Solve algorithmic problems in Python, Java, or C++ with automated test cases, execution memory profiling, and topic proficiency metrics.
           </p>
         </div>
 
-        {/* Tab Toggle */}
-        <div className="flex items-center p-1 bg-slate-900 border border-slate-800 rounded-xl">
+        {/* Tab Switcher */}
+        <div className="flex items-center p-1 bg-[#F1F3F6] border border-[#E5E9EF] rounded-xl self-start md:self-auto shrink-0">
           <button
             onClick={() => setActiveTab("problems")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition ${
               activeTab === "problems"
-                ? "bg-sky-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-white"
+                ? "bg-[#123E63] text-white shadow-xs"
+                : "text-[#8993A0] hover:text-[#202B38]"
             }`}
           >
-            <BookOpen className="w-4 h-4" />
+            <BookOpen className="w-3.5 h-3.5" />
             <span>Problem Bank</span>
           </button>
           <button
             onClick={() => setActiveTab("progress")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition ${
               activeTab === "progress"
-                ? "bg-sky-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-white"
+                ? "bg-[#123E63] text-white shadow-xs"
+                : "text-[#8993A0] hover:text-[#202B38]"
             }`}
           >
-            <BarChart2 className="w-4 h-4" />
+            <BarChart2 className="w-3.5 h-3.5" />
             <span>My Progress & Analytics</span>
           </button>
         </div>
       </div>
 
       {/* Main Tab Content */}
-      {activeTab === "problems" ? (
-        <QuestionList />
-      ) : (
-        <CodingProgress />
-      )}
+      {activeTab === "problems" ? <QuestionList /> : <CodingProgress />}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 from sqlalchemy import String, Integer, DateTime, UUID, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -8,6 +8,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.db.models.user import User
     from app.db.models.resume_analysis import ResumeAnalysis
+    from app.db.models.ats_analysis import ATSAnalysis
 
 
 class Resume(Base):
@@ -42,4 +43,7 @@ class Resume(Base):
     user: Mapped["User"] = relationship("User", back_populates="resumes")
     analysis: Mapped[Optional["ResumeAnalysis"]] = relationship(
         "ResumeAnalysis", back_populates="resume", uselist=False, cascade="all, delete-orphan"
+    )
+    ats_analyses: Mapped[List["ATSAnalysis"]] = relationship(
+        "ATSAnalysis", back_populates="resume", cascade="all, delete-orphan"
     )

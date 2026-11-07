@@ -21,7 +21,6 @@ import {
   XCircle,
   Clock,
   Layers,
-  FileCode,
   Copy,
   Check,
   ExternalLink,
@@ -29,7 +28,6 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  RotateCcw,
   Sparkles,
 } from "lucide-react";
 
@@ -39,17 +37,14 @@ function ResultsContent() {
   const { user, isLoading: authLoading } = useAuth();
   const submissionId = searchParams.get("submissionId");
 
-  // Single submission state
   const [submission, setSubmission] = useState<CodingSubmissionDetail | null>(null);
   const [perfMetrics, setPerfMetrics] = useState<NormalizedPerformanceResult | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
-  // Submissions list state (when no submissionId)
   const [submissionsList, setSubmissionsList] = useState<CodingSubmissionListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // List filters & pagination
   const [search, setSearch] = useState<string>("");
   const [verdictFilter, setVerdictFilter] = useState<string>("all");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
@@ -58,7 +53,6 @@ function ResultsContent() {
   const [totalCount, setTotalCount] = useState<number>(0);
   const limit = 20;
 
-  // Fetch single submission details
   const fetchSingleSubmission = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
@@ -76,7 +70,6 @@ function ResultsContent() {
     }
   }, []);
 
-  // Fetch all user submissions with pagination
   const fetchAllSubmissions = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -86,9 +79,9 @@ function ResultsContent() {
       params.append("limit", limit.toString());
 
       const data = await apiFetch<SubmissionListResponse>(`/coding/submissions?${params.toString()}`);
-      setSubmissionsList(data.submissions);
-      setTotalPages(data.total_pages);
-      setTotalCount(data.total_count);
+      setSubmissionsList(data.submissions || []);
+      setTotalPages(data.total_pages || 1);
+      setTotalCount(data.total_count || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load submissions list.");
     } finally {
@@ -104,10 +97,8 @@ function ResultsContent() {
     }
   }, [submissionId, fetchSingleSubmission, fetchAllSubmissions]);
 
-  // Client-side filtering for fast searching within the page
   const filteredSubmissions = useMemo(() => {
     return submissionsList.filter((item) => {
-      // Search title
       if (search.trim()) {
         const query = search.toLowerCase();
         const matchesTitle = item.question_title?.toLowerCase().includes(query);
@@ -115,7 +106,6 @@ function ResultsContent() {
         if (!matchesTitle && !matchesTopic) return false;
       }
 
-      // Verdict filter
       if (verdictFilter !== "all") {
         const itemVerdict = (item.verdict || item.status).toLowerCase();
         if (verdictFilter === "accepted" && !itemVerdict.includes("accepted")) return false;
@@ -124,7 +114,6 @@ function ResultsContent() {
         if (verdictFilter === "timeout" && !itemVerdict.includes("time")) return false;
       }
 
-      // Difficulty filter
       if (difficultyFilter !== "all") {
         if (item.question_difficulty?.toLowerCase() !== difficultyFilter.toLowerCase()) return false;
       }
@@ -135,8 +124,9 @@ function ResultsContent() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <RefreshCw className="w-8 h-8 text-sky-400 animate-spin" />
+      <div className="py-20 text-center text-[#8993A0]">
+        <RefreshCw className="w-8 h-8 text-[#123E63] animate-spin mx-auto mb-2" />
+        <p className="text-xs font-semibold">Authenticating...</p>
       </div>
     );
   }
@@ -146,369 +136,253 @@ function ResultsContent() {
     return null;
   }
 
-  const copyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
+  const copyCode = (codeText: string) => {
+    navigator.clipboard.writeText(codeText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const getDifficultyBadge = (difficulty?: Difficulty | string | null) => {
-    if (!difficulty) return <span className="text-slate-500">—</span>;
+    if (!difficulty) return <span className="text-[#8993A0]">—</span>;
     switch (difficulty) {
       case "Easy":
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
             Easy
           </span>
         );
       case "Medium":
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#FFF6E8] text-[#F5A623] border border-[#F5A623]/30">
             Medium
           </span>
         );
       case "Hard":
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-600 border border-red-200">
             Hard
           </span>
         );
       default:
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-300">
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600">
             {difficulty}
           </span>
         );
     }
   };
 
-  // =========================================================================
-  // VIEW: SINGLE SUBMISSION DEEP-DIVE
-  // =========================================================================
   if (submissionId) {
-    if (loading) {
-      return (
-        <div className="py-20 text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-sky-400 animate-spin mx-auto" />
-          <p className="text-sm text-slate-400">Loading submission diagnostic...</p>
-        </div>
-      );
-    }
-
-    if (error || !submission) {
-      return (
-        <div className="glass-card p-12 text-center space-y-4 max-w-lg mx-auto my-12">
-          <p className="text-sm text-rose-400">{error || "Submission not found or unauthorized."}</p>
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
           <Link
             href="/coding/results"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-semibold hover:bg-slate-700 transition"
+            className="inline-flex items-center gap-1.5 text-xs text-[#8993A0] hover:text-[#123E63] font-bold transition"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>View All Submissions</span>
+            <span>Back to All Submissions</span>
           </Link>
-        </div>
-      );
-    }
 
-    return (
-      <div className="space-y-6 py-2">
-        {/* Navigation & Breadcrumb */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+          {submission && (
             <Link
-              href="/coding/results"
-              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition font-medium"
+              href={`/coding/${submission.question_id}`}
+              className="inline-flex items-center gap-1 text-xs text-[#123E63] hover:underline font-bold"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span>All Submissions</span>
+              <span>Solve Again</span>
+              <ExternalLink className="w-3.5 h-3.5" />
             </Link>
-            <span className="text-slate-600">/</span>
-            <span className="text-xs text-slate-300 font-mono">
-              Submission #{submission.id.slice(0, 8)}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {submission.question_id && (
-              <Link
-                href={`/coding/${submission.question_id}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Retry in Workspace</span>
-              </Link>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Problem Attempt Header Card */}
-        <div className="glass-card p-5 space-y-3 border-l-4 border-l-sky-500">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
-                Problem Attempt
+        {loading ? (
+          <div className="py-20 text-center text-[#8993A0] space-y-2">
+            <RefreshCw className="w-8 h-8 text-[#123E63] animate-spin mx-auto" />
+            <p className="text-xs font-semibold">Loading diagnostics...</p>
+          </div>
+        ) : error || !submission ? (
+          <div className="bg-white rounded-2xl p-8 text-center space-y-3 shadow-card border border-[#E5E9EF] max-w-lg mx-auto">
+            <p className="text-xs font-bold text-red-600">{error || "Submission record not found."}</p>
+            <Link href="/coding/results" className="text-xs font-bold text-[#123E63] hover:underline">
+              Return to Submissions
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl p-6 shadow-card border border-[#E5E9EF] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  {getDifficultyBadge(submission.question_difficulty)}
+                  <span className="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#F1F3F6] text-[#123E63] border border-[#E5E9EF]">
+                    {submission.question_topic || "Algorithm"}
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-[#202B38]">{submission.question_title}</h2>
+                <p className="text-xs text-[#8993A0] mt-0.5">
+                  Language: <strong className="text-[#202B38] uppercase font-mono">{submission.language}</strong> &bull; Submitted {new Date(submission.created_at).toLocaleString()}
+                </p>
               </div>
-              <h1 className="text-xl md:text-2xl font-bold text-white mt-0.5">
-                {submission.question_title || "Coding Problem"}
-              </h1>
-            </div>
 
-            <div className="flex items-center gap-2">
-              {getDifficultyBadge(submission.question_difficulty)}
-              {submission.question_topic && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-sky-400 border border-slate-700">
-                  <Layers className="w-3 h-3 text-sky-400" />
-                  {submission.question_topic}
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-[#8993A0] uppercase block">Normalized Score</span>
+                <span className="text-3xl font-extrabold text-[#123E63]">
+                  {submission.result?.score?.toFixed(1) || 0}
+                  <span className="text-xs text-[#8993A0] font-normal"> / 100</span>
                 </span>
-              )}
+              </div>
+            </div>
+
+            <SubmissionResult submission={submission} />
+
+            {/* Code Snippet Box */}
+            <div className="bg-white rounded-2xl p-6 shadow-card border border-[#E5E9EF] space-y-3">
+              <div className="flex items-center justify-between border-b border-[#E5E9EF] pb-3">
+                <h3 className="text-sm font-bold text-[#202B38]">Submitted Solution Source</h3>
+                <button
+                  onClick={() => copyCode(submission.code)}
+                  className="px-3 py-1 bg-[#F8F9FA] hover:bg-white text-xs font-bold text-[#123E63] border border-[#E5E9EF] rounded-lg transition flex items-center gap-1.5"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? "Copied" : "Copy Code"}</span>
+                </button>
+              </div>
+
+              <pre className="p-4 rounded-xl bg-[#0A1A2A] text-[#E1EAF5] font-mono text-xs overflow-x-auto leading-5">
+                {submission.code}
+              </pre>
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-2 border-t border-slate-800">
-            <div>
-              Status:{" "}
-              <strong className="text-slate-200 capitalize font-medium">{submission.status}</strong>
-            </div>
-            <div>•</div>
-            <div>
-              Language:{" "}
-              <strong className="text-slate-200 uppercase font-mono">{submission.language}</strong>
-            </div>
-            <div>•</div>
-            <div>
-              Submitted:{" "}
-              <strong className="text-slate-200 font-medium">
-                {new Date(submission.created_at).toLocaleString()}
-              </strong>
-            </div>
-          </div>
-        </div>
-
-        {/* Detailed Results Component (Score, Tests, Execution time, Memory, Test case tabs) */}
-        <SubmissionResult submission={submission} />
-
-        {/* Submitted Code Viewer */}
-        <div className="glass-card p-5 space-y-3">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2 text-xs font-semibold text-white">
-              <FileCode className="w-4 h-4 text-sky-400" />
-              <span>Submitted Solution Source Code ({submission.language})</span>
-            </div>
-
-            <button
-              onClick={() => copyCode(submission.code)}
-              className="inline-flex items-center gap-1 text-xs text-slate-300 hover:text-white px-2.5 py-1 rounded bg-slate-800 border border-slate-700 transition"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400">Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Copy Code</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          <pre className="p-4 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 overflow-x-auto whitespace-pre leading-6">
-            {submission.code}
-          </pre>
-        </div>
+        )}
       </div>
     );
   }
 
-  // =========================================================================
-  // VIEW: ALL SUBMISSIONS HISTORY LIST
-  // =========================================================================
+  // All Submissions List View
   return (
-    <div className="space-y-6 py-2">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-card border border-[#E5E9EF] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
-            <Link href="/coding" className="hover:text-white transition">
-              Coding Assessment
-            </Link>
-            <span>/</span>
-            <span className="text-slate-200 font-medium">Results & History</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#123E63]/10 border border-[#123E63]/20 text-[#123E63] text-xs font-semibold mb-2">
+            <Code2 className="w-3.5 h-3.5 text-[#F5A623]" />
+            Submission Log
           </div>
-          <h1 className="text-2xl font-extrabold text-white">
-            Submission Diagnostic History
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Browse verified execution logs, test-case pass rates, and performance metrics across all your problem attempts.
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#202B38] tracking-tight">
+            Coding Assessment History
+          </h2>
+          <p className="text-xs sm:text-sm text-[#8993A0] mt-1">
+            Historical records of evaluated test executions, solve scores, and runtime benchmarks.
           </p>
         </div>
 
         <Link
           href="/coding"
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold transition"
+          className="px-4 py-2.5 rounded-xl bg-[#123E63] hover:bg-[#0D3557] text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5 self-start sm:self-auto"
         >
-          <Code2 className="w-4 h-4" />
-          <span>Practice Problems</span>
+          <span>Problem Bank</span>
+          <ExternalLink className="w-3.5 h-3.5" />
         </Link>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="glass-card p-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Search input */}
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search problem title or topic..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-500"
-            />
-          </div>
+      {/* Filter Bar */}
+      <div className="bg-white rounded-2xl p-5 shadow-card border border-[#E5E9EF] flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-[#8993A0] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search submission by problem title or topic..."
+            className="w-full bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#202B38] placeholder-[#8993A0] focus:outline-none focus:border-[#123E63] transition"
+          />
+        </div>
 
-          {/* Verdict Filter */}
-          <div>
-            <select
-              value={verdictFilter}
-              onChange={(e) => setVerdictFilter(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-            >
-              <option value="all">All Verdicts</option>
-              <option value="accepted">Accepted (100% Passed)</option>
-              <option value="wrong_answer">Wrong Answer</option>
-              <option value="timeout">Time Limit Exceeded</option>
-              <option value="error">Runtime / Compilation Errors</option>
-            </select>
-          </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={verdictFilter}
+            onChange={(e) => setVerdictFilter(e.target.value)}
+            className="bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl px-3 py-2 text-xs text-[#202B38] font-medium focus:outline-none focus:border-[#123E63]"
+          >
+            <option value="all">All Verdicts</option>
+            <option value="accepted">Accepted</option>
+            <option value="wrong_answer">Wrong Answer</option>
+            <option value="error">Runtime Error</option>
+            <option value="timeout">Time Limit</option>
+          </select>
 
-          {/* Difficulty Filter */}
-          <div>
-            <select
-              value={difficultyFilter}
-              onChange={(e) => setDifficultyFilter(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-            >
-              <option value="all">All Difficulties</option>
-              <option value="Easy">Easy</option>
-              <option value="Medium">Medium</option>
-              <option value="Hard">Hard</option>
-            </select>
-          </div>
+          <select
+            value={difficultyFilter}
+            onChange={(e) => setDifficultyFilter(e.target.value)}
+            className="bg-[#F8F9FA] border border-[#E5E9EF] rounded-xl px-3 py-2 text-xs text-[#202B38] font-medium focus:outline-none focus:border-[#123E63]"
+          >
+            <option value="all">All Difficulties</option>
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
+          </select>
         </div>
       </div>
 
-      {/* History Table */}
-      <div className="glass-card overflow-hidden">
+      {/* Table */}
+      <div className="bg-white rounded-2xl shadow-card border border-[#E5E9EF] overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center space-y-3">
-            <RefreshCw className="w-8 h-8 text-sky-400 animate-spin mx-auto" />
-            <p className="text-sm text-slate-400">Loading submissions history...</p>
-          </div>
-        ) : error ? (
-          <div className="py-12 text-center space-y-3">
-            <p className="text-sm text-rose-400">{error}</p>
-            <button
-              onClick={fetchAllSubmissions}
-              className="px-4 py-2 bg-slate-800 text-xs text-slate-200 hover:text-white rounded-lg border border-slate-700"
-            >
-              Retry
-            </button>
+          <div className="py-16 text-center space-y-2 text-[#8993A0]">
+            <RefreshCw className="w-6 h-6 text-[#123E63] animate-spin mx-auto" />
+            <p className="text-xs font-semibold">Loading submissions...</p>
           </div>
         ) : filteredSubmissions.length === 0 ? (
-          <div className="py-16 text-center space-y-3">
-            <Code2 className="w-10 h-10 text-slate-600 mx-auto" />
-            <h3 className="text-sm font-semibold text-white">No submissions found</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              {search || verdictFilter !== "all" || difficultyFilter !== "all"
-                ? "No submissions matched your current filters."
-                : "You have not submitted any solutions yet. Go to the Problem Bank and solve your first challenge!"}
-            </p>
-            {(search || verdictFilter !== "all" || difficultyFilter !== "all") && (
-              <button
-                onClick={() => {
-                  setSearch("");
-                  setVerdictFilter("all");
-                  setDifficultyFilter("all");
-                }}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700"
-              >
-                Reset Filters
-              </button>
-            )}
+          <div className="py-16 text-center space-y-2 text-[#8993A0]">
+            <Code2 className="w-8 h-8 text-[#BCD3E6] mx-auto" />
+            <p className="text-xs font-bold text-[#202B38]">No submissions found</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/80 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-800">
+              <thead className="bg-[#F8F9FA] text-[#8993A0] uppercase text-[10px] font-bold border-b border-[#E5E9EF]">
                 <tr>
-                  <th className="px-5 py-3">Status / Verdict</th>
+                  <th className="px-5 py-3">Verdict</th>
                   <th className="px-5 py-3">Problem Title</th>
                   <th className="px-5 py-3">Topic</th>
                   <th className="px-5 py-3">Difficulty</th>
                   <th className="px-5 py-3">Language</th>
                   <th className="px-5 py-3">Tests Passed</th>
                   <th className="px-5 py-3">Score</th>
-                  <th className="px-5 py-3">Submitted At</th>
+                  <th className="px-5 py-3">Date</th>
                   <th className="px-5 py-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-200">
+              <tbody className="divide-y divide-[#E5E9EF] text-[#202B38]">
                 {filteredSubmissions.map((sub) => {
                   const verdictStr = sub.verdict || sub.status;
                   const isAccepted = verdictStr.toLowerCase().includes("accepted");
-                  const isTimeout = verdictStr.toLowerCase().includes("time");
-                  const isError = verdictStr.toLowerCase().includes("error") || verdictStr.toLowerCase().includes("failed");
-
                   return (
-                    <tr key={sub.id} className="hover:bg-slate-800/40 transition">
-                      {/* Verdict */}
+                    <tr key={sub.id} className="hover:bg-[#F8F9FA] transition">
                       <td className="px-5 py-3.5">
                         <span
-                          className={`font-semibold inline-flex items-center gap-1 ${
-                            isAccepted
-                              ? "text-emerald-400"
-                              : isTimeout
-                              ? "text-amber-400"
-                              : isError
-                              ? "text-rose-400"
-                              : "text-rose-400"
+                          className={`font-bold inline-flex items-center gap-1.5 ${
+                            isAccepted ? "text-emerald-700" : "text-red-600"
                           }`}
                         >
-                          {isAccepted ? (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          ) : isTimeout ? (
-                            <Clock className="w-3.5 h-3.5" />
-                          ) : (
-                            <XCircle className="w-3.5 h-3.5" />
-                          )}
+                          {isAccepted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
                           <span>{verdictStr}</span>
                         </span>
                       </td>
 
-                      {/* Problem Title */}
-                      <td className="px-5 py-3.5 font-medium text-white">
-                        <Link href={`/coding/${sub.question_id}`} className="hover:text-sky-400 transition">
+                      <td className="px-5 py-3.5 font-bold">
+                        <Link href={`/coding/${sub.question_id}`} className="hover:text-[#123E63] transition">
                           {sub.question_title || "Problem"}
                         </Link>
                       </td>
 
-                      {/* Topic */}
-                      <td className="px-5 py-3.5 text-slate-400">{sub.question_topic || "—"}</td>
-
-                      {/* Difficulty */}
+                      <td className="px-5 py-3.5 text-[#8993A0]">{sub.question_topic || "—"}</td>
                       <td className="px-5 py-3.5">{getDifficultyBadge(sub.question_difficulty)}</td>
-
-                      {/* Language */}
-                      <td className="px-5 py-3.5 font-mono text-[11px] text-slate-300 uppercase">
+                      <td className="px-5 py-3.5 font-mono text-[11px] text-[#8993A0] uppercase">
                         {sub.language}
                       </td>
 
-                      {/* Tests Passed / Total */}
-                      <td className="px-5 py-3.5 text-slate-300">
-                        {sub.passed_test_cases !== undefined && sub.total_test_cases !== undefined && sub.total_test_cases !== null ? (
-                          <span className={sub.passed_test_cases === sub.total_test_cases ? "text-emerald-400 font-semibold" : "text-slate-300"}>
+                      <td className="px-5 py-3.5">
+                        {sub.passed_test_cases !== undefined && sub.total_test_cases !== null ? (
+                          <span className={sub.passed_test_cases === sub.total_test_cases ? "text-emerald-700 font-bold" : "text-[#202B38]"}>
                             {sub.passed_test_cases} / {sub.total_test_cases}
                           </span>
                         ) : (
@@ -516,30 +390,21 @@ function ResultsContent() {
                         )}
                       </td>
 
-                      {/* Score */}
-                      <td className="px-5 py-3.5 font-bold text-white">
-                        {sub.score !== undefined && sub.score !== null ? (
-                          <span className={sub.score === 100 ? "text-emerald-400" : "text-white"}>
-                            {sub.score.toFixed(0)}/100
-                          </span>
-                        ) : (
-                          "—"
-                        )}
+                      <td className="px-5 py-3.5 font-bold">
+                        {sub.score !== undefined && sub.score !== null ? `${sub.score.toFixed(0)}/100` : "—"}
                       </td>
 
-                      {/* Date */}
-                      <td className="px-5 py-3.5 text-slate-400 text-[11px]">
-                        {new Date(sub.created_at).toLocaleString()}
+                      <td className="px-5 py-3.5 text-[#8993A0] text-[11px]">
+                        {new Date(sub.created_at).toLocaleDateString()}
                       </td>
 
-                      {/* Action */}
                       <td className="px-5 py-3.5 text-right">
                         <Link
                           href={`/coding/results?submissionId=${sub.id}`}
-                          className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-medium"
+                          className="inline-flex items-center gap-1 text-xs text-[#123E63] hover:underline font-bold"
                         >
-                          <span>Diagnostics</span>
-                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Review</span>
+                          <ExternalLink className="w-3 h-3" />
                         </Link>
                       </td>
                     </tr>
@@ -550,27 +415,26 @@ function ResultsContent() {
           </div>
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-5 py-3 bg-slate-900/60 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+          <div className="px-5 py-3 bg-[#F8F9FA] border-t border-[#E5E9EF] flex items-center justify-between text-xs text-[#8993A0]">
             <div>
-              Showing page {page} of {totalPages} ({totalCount} total submissions)
+              Showing page {page} of {totalPages} ({totalCount} total)
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1 || loading}
-                className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded text-slate-300"
+                className="p-1.5 bg-white border border-[#E5E9EF] rounded-lg text-[#202B38] disabled:opacity-40"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <span>{page} / {totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages || loading}
-                className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded text-slate-300"
+                className="p-1.5 bg-white border border-[#E5E9EF] rounded-lg text-[#202B38] disabled:opacity-40"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -584,9 +448,9 @@ export default function CodingResultsPage() {
   return (
     <Suspense
       fallback={
-        <div className="py-20 text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-sky-400 animate-spin mx-auto" />
-          <p className="text-sm text-slate-400">Loading results...</p>
+        <div className="py-20 text-center text-[#8993A0]">
+          <RefreshCw className="w-8 h-8 text-[#123E63] animate-spin mx-auto mb-2" />
+          <p className="text-xs font-semibold">Loading results...</p>
         </div>
       }
     >
