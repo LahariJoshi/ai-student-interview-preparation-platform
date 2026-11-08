@@ -10,6 +10,10 @@ import PreparationProgressChart from "@/components/dashboard/PreparationProgress
 import SkillDevelopmentChart from "@/components/dashboard/SkillDevelopmentChart";
 import ReadinessSidePanel from "@/components/dashboard/ReadinessSidePanel";
 import {
+  DashboardOverviewResponse,
+  DashboardAssessmentRecord,
+} from "@/types/dashboard";
+import {
   BarChart2,
   TrendingUp,
   Award,
@@ -22,16 +26,6 @@ import {
   Code2,
   Mic,
 } from "lucide-react";
-
-interface AssessmentHistoryRecord {
-  id: string;
-  type: "ATS Analysis" | "Coding Assessment" | "Mock Interview";
-  title: string;
-  date: string;
-  score: number;
-  status: "Completed" | "Passed" | "Needs Review";
-  link: string;
-}
 
 export default function PerformanceDashboardPage() {
   const router = useRouter();
@@ -46,14 +40,15 @@ export default function PerformanceDashboardPage() {
   const [metrics, setMetrics] = useState<MetricData>({
     atsScore: null,
     codingSolved: 0,
-    codingTotal: 25,
+    codingTotal: 222,
     codingAccuracy: 0,
     interviewCount: 0,
     interviewAvgScore: null,
     readinessScore: 0,
   });
 
-  const [history, setHistory] = useState<AssessmentHistoryRecord[]>([]);
+  const [overview, setOverview] = useState<DashboardOverviewResponse | null>(null);
+  const [history, setHistory] = useState<DashboardAssessmentRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [filterType, setFilterType] = useState<string>("all");
 
@@ -61,121 +56,23 @@ export default function PerformanceDashboardPage() {
     async function fetchPerformanceData() {
       setLoading(true);
       try {
-        let atsScore: number | null = null;
-        let codingSolved = 0;
-        let codingTotal = 25;
-        let codingAccuracy = 0;
-        let interviewCount = 0;
-        let interviewAvgScore: number | null = null;
-        const records: AssessmentHistoryRecord[] = [];
-
-        // 1. Fetch ATS analyses
-        try {
-          const atsList = await apiFetch<any[]>("/ats/history");
-          if (Array.isArray(atsList) && atsList.length > 0) {
-            atsScore = atsList[0].ats_score;
-            atsList.slice(0, 5).forEach((item) => {
-              records.push({
-                id: item.analysis_id || item.id,
-                type: "ATS Analysis",
-                title: "Resume vs Target Job Description",
-                date: item.analyzed_at ? new Date(item.analyzed_at).toLocaleDateString() : "Recent",
-                score: Math.round(item.ats_score || 0),
-                status: (item.ats_score || 0) >= 70 ? "Completed" : "Needs Review",
-                link: "/ats",
-              });
-            });
-          }
-        } catch {
-          // Fallback check resume analysis
-          try {
-            const resumeAnalysis = await apiFetch<any>("/resume/latest/analysis");
-            if (resumeAnalysis && resumeAnalysis.quality_score !== null) {
-              atsScore = resumeAnalysis.quality_score;
-              records.push({
-                id: resumeAnalysis.id,
-                type: "ATS Analysis",
-                title: "Resume Structural Quality",
-                date: new Date(resumeAnalysis.created_at).toLocaleDateString(),
-                score: Math.round(resumeAnalysis.quality_score),
-                status: resumeAnalysis.quality_score >= 70 ? "Completed" : "Needs Review",
-                link: "/resume",
-              });
-            }
-          } catch {}
-        }
-
-        // 2. Fetch Coding Progress and Submissions
-        try {
-          const [codingData, codingHist] = await Promise.all([
-            apiFetch<any>("/coding/progress"),
-            apiFetch<any[]>("/coding/performance/history?limit=10"),
-          ]);
-
-          if (codingData) {
-            codingSolved = codingData.total_solved || 0;
-            codingTotal = codingData.total_questions || 25;
-            codingAccuracy = codingData.solve_rate ? codingData.solve_rate * 100 : 0;
-          }
-
-          if (Array.isArray(codingHist)) {
-            codingHist.forEach((sub) => {
-              records.push({
-                id: sub.submission_id,
-                type: "Coding Assessment",
-                title: `${sub.question_title} (${sub.language})`,
-                date: new Date(sub.submitted_at).toLocaleDateString(),
-                score: Math.round(sub.normalized_score || 0),
-                status: sub.status === "Accepted" ? "Passed" : "Needs Review",
-                link: `/coding/results?submissionId=${sub.submission_id}`,
-              });
-            });
-          }
-        } catch {}
-
-        // 3. Fetch Mock Interview Sessions
-        try {
-          const interviewData = await apiFetch<any>("/interviews/history");
-          if (interviewData) {
-            interviewCount = interviewData.total_interviews || interviewData.completed_interviews || 0;
-            interviewAvgScore = interviewData.average_score || null;
-
-            if (Array.isArray(interviewData.sessions)) {
-              interviewData.sessions.slice(0, 5).forEach((sess: any) => {
-                records.push({
-                  id: sess.id,
-                  type: "Mock Interview",
-                  title: `${sess.target_role} (${sess.interview_type})`,
-                  date: new Date(sess.started_at).toLocaleDateString(),
-                  score: Math.round(sess.overall_score || 0),
-                  status: sess.status === "completed" ? "Completed" : "Needs Review",
-                  link: `/interview/${sess.id}/results`,
-                });
-              });
-            }
-          }
-        } catch {}
-
-        // Sort records by date if possible
-        setHistory(records);
-
-        // Weighted readiness formula:
-        const atsPart = atsScore !== null ? atsScore * 0.3 : 20;
-        const codingPart = codingTotal > 0 ? (codingSolved / codingTotal) * 100 * 0.35 : 0;
-        const interviewPart = interviewAvgScore !== null ? interviewAvgScore * 0.35 : (interviewCount > 0 ? 50 * 0.35 : 15);
-        const readiness = Math.min(100, Math.round(atsPart + codingPart + interviewPart));
+        // Fetch unified dashboard overview from backend API
+        const data = await apiFetch<DashboardOverviewResponse>("/dashboard/overview");
+        setOverview(data);
 
         setMetrics({
-          atsScore,
-          codingSolved,
-          codingTotal,
-          codingAccuracy,
-          interviewCount,
-          interviewAvgScore,
-          readinessScore: readiness > 0 ? readiness : 45,
+          atsScore: data.metrics.ats_score,
+          codingSolved: data.metrics.coding_solved,
+          codingTotal: data.metrics.coding_total,
+          codingAccuracy: data.metrics.coding_accuracy !== null ? data.metrics.coding_accuracy : 0,
+          interviewCount: data.metrics.interview_count,
+          interviewAvgScore: data.metrics.interview_avg_score,
+          readinessScore: data.metrics.readiness_score,
         });
+
+        setHistory(data.recent_history || []);
       } catch (e) {
-        console.error("Performance load error:", e);
+        console.error("Dashboard overview error:", e);
       } finally {
         setLoading(false);
       }
@@ -227,10 +124,16 @@ export default function PerformanceDashboardPage() {
         {/* Center-Left Main Visual Area (8 cols) */}
         <div className="lg:col-span-8 space-y-6">
           {/* Main Performance Comparison Bar Chart */}
-          <PreparationProgressChart />
+          <PreparationProgressChart
+            data={overview?.progress_chart}
+            isLoading={loading}
+          />
 
           {/* Skill Progress Dual-Wave Area Chart */}
-          <SkillDevelopmentChart />
+          <SkillDevelopmentChart
+            data={overview?.skill_development}
+            isLoading={loading}
+          />
         </div>
 
         {/* Right-Side Performance Panel (4 cols) */}
